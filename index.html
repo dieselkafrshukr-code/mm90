@@ -96,6 +96,7 @@
             </ul>
             <div class="nav-icons">
                 <a href="#" id="theme-toggle"><i class="fas fa-moon"></i></a>
+                <a href="#" id="my-orders-btn" title="طلباتي"><i class="fas fa-box"></i></a>
                 <a href="#" id="admin-login-btn"><i class="fas fa-user-shield"></i></a>
                 <a href="#" id="cart-btn" class="cart-icon">
                     <i class="fas fa-shopping-bag"></i>
@@ -250,8 +251,9 @@
         <div class="modal-content checkout-form-container">
             <button id="close-checkout" class="close-modal"><i class="fas fa-times"></i></button>
             <h2 class="modal-title">تنشيط الطلب 📦</h2>
-            <p style="text-align: center; margin-bottom: 20px; color: #fff; opacity: 0.8;">برجاء إدخال بياناتك لإتمام الطلب</p>
-            
+            <p style="text-align: center; margin-bottom: 20px; color: #fff; opacity: 0.8;">برجاء إدخال بياناتك لإتمام
+                الطلب</p>
+
             <form id="order-form" class="order-form">
                 <div class="form-group">
                     <label for="customer-name">الاسم بالكامل</label>
@@ -265,7 +267,7 @@
                     <label for="customer-address">العنوان بالتفصيل</label>
                     <textarea id="customer-address" required placeholder="المحافظة، المركز، الشارع..."></textarea>
                 </div>
-                
+
                 <div class="order-summary-mini">
                     <div class="summary-row">
                         <span>إجمالي الطلب:</span>
@@ -273,7 +275,8 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">تأكيد الطلب الآن ✨</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">تأكيد الطلب الآن
+                    ✨</button>
             </form>
         </div>
     </div>
@@ -285,8 +288,44 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <h2 style="margin-bottom: 10px;">تم استلام طلبك بنجاح!</h2>
-            <p style="margin-bottom: 25px; opacity: 0.8;">شكراً لثقتك بـ دايزل. سيتم التواصل معك قريباً لتأكيد الطلب.</p>
+            <p style="margin-bottom: 25px; opacity: 0.8;">شكراً لثقتك بـ دايزل. سيتم التواصل معك قريباً لتأكيد الطلب.
+            </p>
             <button onclick="closeSuccessModal()" class="btn btn-primary">حسناً</button>
+        </div>
+    </div>
+
+    <!-- My Orders Modal -->
+    <div id="my-orders-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <button id="close-orders-modal" class="close-modal"><i class="fas fa-times"></i></button>
+
+            <!-- Login Section (shown when not logged in) -->
+            <div id="orders-login-section" style="text-align: center; padding: 30px 20px;">
+                <i class="fas fa-box-open" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;"></i>
+                <h2 style="margin-bottom: 15px;">تتبع طلباتك</h2>
+                <p style="margin-bottom: 25px; opacity: 0.8;">سجل دخول بحساب جوجل لمتابعة حالة طلباتك</p>
+                <button id="google-login-btn" class="btn btn-primary"
+                    style="display: inline-flex; align-items: center; gap: 10px; padding: 12px 30px;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 20px;">
+                    تسجيل الدخول بجوجل
+                </button>
+            </div>
+
+            <!-- Orders Section (shown when logged in) -->
+            <div id="orders-list-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;"><i class="fas fa-box"></i> طلباتي</h2>
+                    <button id="logout-btn"
+                        style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                        <i class="fas fa-sign-out-alt"></i> خروج
+                    </button>
+                </div>
+                <p id="user-email-display" style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 20px;"></p>
+
+                <div id="my-orders-list">
+                    <div style="text-align: center; padding: 30px; opacity: 0.5;">جاري تحميل الطلبات...</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -294,6 +333,7 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
     <script src="./js/products.js"></script>
     <script src="./js/main.js"></script>

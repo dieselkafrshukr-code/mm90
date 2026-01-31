@@ -297,6 +297,225 @@
             background: var(--accent);
             border-color: var(--accent);
         }
+
+        /* ===== Mobile Responsive Styles ===== */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+                text-align: center;
+            }
+
+            .header>div {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .header img {
+                width: 40px !important;
+            }
+
+            .header>div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .header .btn-add {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+
+            .admin-tabs {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .tab-btn {
+                padding: 10px 15px;
+                font-size: 0.85rem;
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
+            }
+
+            #products-section>div:first-child {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            #products-section>div:first-child>div {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            #products-section .btn-add {
+                padding: 8px 12px;
+                font-size: 0.75rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 15px 10px;
+            }
+
+            .stat-card i {
+                font-size: 1.5rem;
+            }
+
+            .stat-card h3 {
+                font-size: 1.2rem;
+            }
+
+            .stat-card p {
+                font-size: 0.8rem;
+            }
+
+            .product-form {
+                padding: 15px;
+            }
+
+            .product-form h2 {
+                font-size: 1.1rem;
+                margin-bottom: 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .form-group label {
+                font-size: 0.85rem;
+            }
+
+            input,
+            select,
+            textarea {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+
+            #color-variants-container {
+                grid-template-columns: 1fr !important;
+            }
+
+            .product-form button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .product-form>div:last-child {
+                flex-direction: column;
+            }
+
+            .products-table-container {
+                padding: 10px;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th,
+            td {
+                padding: 8px 5px;
+            }
+
+            .product-thumb {
+                width: 40px;
+                height: 40px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .actions i {
+                font-size: 1.1rem;
+                padding: 5px;
+            }
+
+            /* Orders Section Mobile */
+            #orders-section>div:first-child {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .order-card {
+                padding: 15px;
+            }
+
+            .order-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .order-header h3 {
+                font-size: 1rem;
+            }
+
+            .order-footer {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .order-footer>div:last-child {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .btn-status {
+                padding: 8px 10px;
+                font-size: 0.8rem;
+            }
+
+            /* Login Page Mobile */
+            #login-overlay>div {
+                padding: 25px 20px !important;
+                width: 95% !important;
+            }
+
+            #login-overlay img {
+                width: 60px !important;
+            }
+
+            #login-overlay h2 {
+                font-size: 1.2rem !important;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-btn {
+                width: 100%;
+            }
+
+            .header h1 {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 
@@ -478,6 +697,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+    <!-- Excel Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script src="./js/admin.js"></script>
 </body>

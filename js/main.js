@@ -16,9 +16,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase if config is provided
+let currentUser = null;
 if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     firebase.initializeApp(firebaseConfig);
     var db = firebase.firestore();
+
+    // Auth State Listener
+    firebase.auth().onAuthStateChanged(user => {
+        currentUser = user;
+        updateAuthUI();
+    });
 }
 
 // DOM Elements
@@ -209,7 +216,7 @@ function setupEventListeners() {
             e.preventDefault();
             const submitBtn = orderForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerText;
-            
+
             submitBtn.disabled = true;
             submitBtn.innerText = "جاري تأكيد الطلب...";
 
@@ -228,17 +235,19 @@ function setupEventListeners() {
                 })),
                 total: cart.reduce((s, i) => s + (i.price * i.quantity), 0),
                 status: "جديد",
+                userId: currentUser ? currentUser.uid : null,
+                userEmail: currentUser ? currentUser.email : null,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             try {
                 if (typeof db !== 'undefined') {
                     await db.collection('orders').add(orderData);
-                    
+
                     // Clear cart
                     cart = [];
                     updateCartUI();
-                    
+
                     // Show success
                     checkoutModal.classList.remove('active');
                     document.getElementById('success-modal').classList.add('active');
@@ -533,3 +542,162 @@ function updateThemeIcon(theme) {
 window.closeSuccessModal = () => {
     document.getElementById('success-modal').classList.remove('active');
 };
+
+// ========== CUSTOMER AUTH & ORDERS TRACKING ==========
+
+function updateAuthUI() {
+    const myOrdersBtn = document.getElementById('my-orders-btn');
+    if (!myOrdersBtn) return;
+
+    if (currentUser) {
+        myOrdersBtn.innerHTML = '<i class="fas fa-box"></i>';
+        myOrdersBtn.title = 'طلباتي';
+    } else {
+        myOrdersBtn.innerHTML = '<i class="fas fa-box"></i>';
+        myOrdersBtn.title = 'طلباتي - تسجيل الدخول';
+    }
+}
+
+function setupOrdersEventListeners() {
+    const myOrdersBtn = document.getElementById('my-orders-btn');
+    const myOrdersModal = document.getElementById('my-orders-modal');
+    const closeOrdersModal = document.getElementById('close-orders-modal');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (myOrdersBtn) {
+        myOrdersBtn.onclick = (e) => {
+            e.preventDefault();
+            openMyOrdersModal();
+        };
+    }
+
+    if (closeOrdersModal) {
+        closeOrdersModal.onclick = () => myOrdersModal.classList.remove('active');
+    }
+
+    if (googleLoginBtn) {
+        googleLoginBtn.onclick = signInWithGoogle;
+    }
+
+    if (logoutBtn) {
+        logoutBtn.onclick = signOutUser;
+    }
+}
+
+function openMyOrdersModal() {
+    const modal = document.getElementById('my-orders-modal');
+    const loginSection = document.getElementById('orders-login-section');
+    const ordersSection = document.getElementById('orders-list-section');
+
+    if (currentUser) {
+        loginSection.style.display = 'none';
+        ordersSection.style.display = 'block';
+        document.getElementById('user-email-display').innerText = currentUser.email;
+        loadMyOrders();
+    } else {
+        loginSection.style.display = 'block';
+        ordersSection.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+}
+
+async function signInWithGoogle() {
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await firebase.auth().signInWithPopup(provider);
+        showToast("تم تسجيل الدخول بنجاح ✅");
+        openMyOrdersModal();
+    } catch (error) {
+        console.error("Google Sign-in Error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+            alert("حدث خطأ أثناء تسجيل الدخول: " + error.message);
+        }
+    }
+}
+
+async function signOutUser() {
+    try {
+        await firebase.auth().signOut();
+        showToast("تم تسجيل الخروج");
+        document.getElementById('my-orders-modal').classList.remove('active');
+    } catch (error) {
+        console.error("Sign-out Error:", error);
+    }
+}
+
+async function loadMyOrders() {
+    const ordersList = document.getElementById('my-orders-list');
+    if (!currentUser || !db) return;
+
+    ordersList.innerHTML = '<div style="text-align: center; padding: 30px; opacity: 0.5;">جاري تحميل الطلبات...</div>';
+
+    try {
+        const snapshot = await db.collection('orders')
+            .where('userId', '==', currentUser.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (snapshot.empty) {
+            ordersList.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3; margin-bottom: 15px;"></i>
+                    <p style="opacity: 0.6;">لا توجد طلبات سابقة</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        snapshot.forEach(doc => {
+            const order = doc.data();
+            const date = order.createdAt ? order.createdAt.toDate().toLocaleDateString('ar-EG') : 'قيد المعالجة';
+            const statusClass = getOrderStatusClass(order.status);
+            const statusColor = getOrderStatusColor(order.status);
+
+            html += `
+                <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.85rem; opacity: 0.7;"><i class="fas fa-calendar"></i> ${date}</span>
+                        <span style="background: ${statusColor}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">${order.status}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; margin-bottom: 10px;">
+                        ${order.items.map(i => `<div style="padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">${i.name} (${i.color} - ${i.size}) × ${i.quantity}</div>`).join('')}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <span style="font-weight: bold; color: var(--primary);">${order.total} جنيه</span>
+                    </div>
+                </div>`;
+        });
+
+        ordersList.innerHTML = html;
+
+    } catch (error) {
+        console.error("Error loading orders:", error);
+        ordersList.innerHTML = '<div style="text-align: center; padding: 30px; color: #f44336;">حدث خطأ في تحميل الطلبات</div>';
+    }
+}
+
+function getOrderStatusClass(status) {
+    const map = {
+        'جديد': 'new',
+        'جاري التجهيز': 'preparing',
+        'تم الشحن': 'shipped',
+        'تم التسليم': 'delivered'
+    };
+    return map[status] || 'default';
+}
+
+function getOrderStatusColor(status) {
+    const map = {
+        'جديد': '#2196F3',
+        'جاري التجهيز': '#FF9800',
+        'تم الشحن': '#9C27B0',
+        'تم التسليم': '#4CAF50',
+        'ملغي': '#f44336'
+    };
+    return map[status] || '#666';
+}
+
+// Initialize orders event listeners
+document.addEventListener('DOMContentLoaded', setupOrdersEventListeners);

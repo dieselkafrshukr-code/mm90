@@ -564,6 +564,97 @@ async function deleteOrder(id) {
     }
 }
 
-function exportOrders() {
-    alert("هذه الميزة ستكون متاحة قريباً (تصدير إكسل) 📊");
+async function exportOrders() {
+    if (!isFirebaseReady) return;
+
+    showLoader(true);
+    try {
+        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+        if (snapshot.empty) {
+            alert("لا توجد طلبات لتصديرها! 📭");
+            showLoader(false);
+            return;
+        }
+
+        const allOrders = [];
+        const todayOrders = [];
+        const stats = {
+            total: 0,
+            delivered: 0,
+            pending: 0,
+            revenue: 0,
+            todayRevenue: 0
+        };
+
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        snapshot.forEach(doc => {
+            const o = doc.data();
+            const createdAt = o.createdAt ? o.createdAt.toDate() : null;
+            const dateStr = createdAt ? createdAt.toLocaleString('ar-EG') : 'قيد المعالجة';
+            const itemsList = o.items.map(i => `${i.name} (${i.color}/${i.size}) x${i.quantity}`).join(' | ');
+
+            const row = {
+                "التاريخ": dateStr,
+                "اسم العميل": o.customerName,
+                "رقم الهاتف": o.phone,
+                "العنوان": o.address,
+                "المنتجات": itemsList,
+                "الإجمالي": o.total + " ج.م",
+                "الحالة": o.status
+            };
+
+            allOrders.push(row);
+            stats.total++;
+            stats.revenue += Number(o.total || 0);
+
+            if (o.status === 'تم التسليم') stats.delivered++;
+            else if (o.status !== 'ملغي') stats.pending++;
+
+            if (createdAt && createdAt >= startOfToday) {
+                todayOrders.push(row);
+                stats.todayRevenue += Number(o.total || 0);
+            }
+        });
+
+        const workbook = XLSX.utils.book_new();
+
+        // 1. Summary Sheet
+        const summaryData = [
+            ["تقرير مبيعات ديزل كفر شكر", ""],
+            ["إجمالي الطلبات", stats.total],
+            ["تم التسليم", stats.delivered],
+            ["قيد التنفيذ", stats.pending],
+            ["إجمالي الإيرادات", stats.revenue + " ج.م"],
+            ["إيرادات اليوم", stats.todayRevenue + " ج.م"],
+            ["تاريخ استخراج التقرير", new Date().toLocaleString('ar-EG')]
+        ];
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(workbook, wsSummary, "الملخص");
+
+        // 2. Today's Orders
+        const wsToday = XLSX.utils.json_to_sheet(todayOrders);
+        XLSX.utils.book_append_sheet(workbook, wsToday, "طلبات اليوم");
+
+        // 3. All Orders
+        const wsAll = XLSX.utils.json_to_sheet(allOrders);
+        XLSX.utils.book_append_sheet(workbook, wsAll, "كافة الطلبات");
+
+        // Column widths
+        const wscols = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 35 }, { wch: 50 }, { wch: 15 }, { wch: 15 }];
+        wsToday['!cols'] = wscols;
+        wsAll['!cols'] = wscols;
+        wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];
+
+        const fileName = `Diesel_Report_${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+
+        alert("تم استخراج التقرير بنجاح! 📊🚀");
+    } catch (err) {
+        console.error(err);
+        alert("حدث خطأ أثناء التصدير!");
+    } finally {
+        showLoader(false);
+    }
 }
