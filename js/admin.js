@@ -572,9 +572,9 @@ async function deleteAllOrders() {
     const confirmation = confirm("⚠️ هل أنت متأكد من حذف كااااافة الطلبات؟ لا يمكن التراجع عن هذه العملية!");
     if (!confirmation) return;
 
-    const finalPass = prompt("من فضلك اكتب 'تأكيد' لإتمام الحذف النهائي:");
-    if (finalPass !== "تأكيد") {
-        alert("لم يتم الحذف. يجب كتابة كلمة 'تأكيد' بشكل صحيح.");
+    const finalPass = prompt("من فضلك اكتب 'ديزل' لإتمام الحذف النهائي:");
+    if (finalPass !== "ديزل") {
+        alert("لم يتم الحذف. يجب كتابة كلمة 'ديزل' بشكل صحيح.");
         return;
     }
 
