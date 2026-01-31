@@ -578,12 +578,12 @@ async function deleteAllOrders() {
         return;
     }
 
-    if (loader) loader.style.display = 'flex';
+    showLoader(true);
     try {
         const snapshot = await db.collection('orders').get();
         if (snapshot.empty) {
             alert("لا توجد طلبات لحذفها! 📭");
-            if (loader) loader.style.display = 'none';
+            showLoader(false);
             return;
         }
 
@@ -598,7 +598,7 @@ async function deleteAllOrders() {
         console.error("Error deleting all orders:", err);
         alert("حدث خطأ أثناء محاولة حذف جميع الطلبات!");
     } finally {
-        if (loader) loader.style.display = 'none';
+        showLoader(false);
     }
 }
 
