@@ -555,12 +555,50 @@ async function updateOrderStatus(id, newStatus) {
 }
 
 async function deleteOrder(id) {
-    if (!confirm("هل أنت متأكد من حذف هذا الطلب نهائياً؟")) return;
+    if (!isFirebaseReady) return;
+    if (!confirm("هل تريد حذف هذا الطلب؟")) return;
+
     try {
         await db.collection('orders').doc(id).delete();
         alert("تم حذف الطلب 🗑️");
     } catch (err) {
         alert("خطأ في الحذف!");
+    }
+}
+
+async function deleteAllOrders() {
+    if (!isFirebaseReady) return;
+
+    const confirmation = confirm("⚠️ هل أنت متأكد من حذف كااااافة الطلبات؟ لا يمكن التراجع عن هذه العملية!");
+    if (!confirmation) return;
+
+    const finalPass = prompt("من فضلك اكتب 'تأكيد' لإتمام الحذف النهائي:");
+    if (finalPass !== "تأكيد") {
+        alert("لم يتم الحذف. يجب كتابة كلمة 'تأكيد' بشكل صحيح.");
+        return;
+    }
+
+    if (loader) loader.style.display = 'flex';
+    try {
+        const snapshot = await db.collection('orders').get();
+        if (snapshot.empty) {
+            alert("لا توجد طلبات لحذفها! 📭");
+            if (loader) loader.style.display = 'none';
+            return;
+        }
+
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        alert("تم مسح جميع الطلبات بنجاح 🗑️🧹");
+    } catch (err) {
+        console.error("Error deleting all orders:", err);
+        alert("حدث خطأ أثناء محاولة حذف جميع الطلبات!");
+    } finally {
+        if (loader) loader.style.display = 'none';
     }
 }
 
