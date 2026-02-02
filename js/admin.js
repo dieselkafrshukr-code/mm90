@@ -246,9 +246,32 @@ async function handleVariantImage(input, id) {
     }
 }
 
-async function compressImage(base64) {
-    // Zero compression: Return original base64 to preserve 100% quality and aspect ratio
-    return base64;
+async function compressImage(base64, maxWidth = 1800) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // Premium Sharpening / Smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.92));
+        };
+    });
 }
 
 function updateSubCats() {
@@ -260,19 +283,15 @@ function updateSubCats() {
 
 async function handleImage(input) {
     if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (file.size > 2 * 1024 * 1024) { // 2MB Limit safety
-            alert("الصورة كبيرة جداً! يرجى اختيار صورة أقل من 2 ميجا للحفاظ على سرعة الموقع.");
-            return;
-        }
         const reader = new FileReader();
-        reader.onload = function (e) {
-            const originalBase64 = e.target.result;
-            document.getElementById('p-image-base64').value = originalBase64;
-            previewImg.src = originalBase64;
+        reader.onload = async (e) => {
+            const base64 = e.target.result;
+            const hdImage = await compressImage(base64);
+            document.getElementById('p-image-base64').value = hdImage;
+            previewImg.src = hdImage;
             previewImg.style.display = 'block';
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(input.files[0]);
     }
 }
 

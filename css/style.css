@@ -989,23 +989,31 @@ footer {
 /* Modal Left Side: Image Section */
 .modal-product-img {
     flex: 1.2;
-    background: #0a0a0a;
+    background: #000;
     position: relative;
     overflow: hidden;
     height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    image-rendering: high-quality;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .modal-product-img img {
     width: 100%;
     height: auto;
-    max-height: 90vh;
-    /* Don't exceed modal height */
+    max-height: 85vh;
     object-fit: contain;
-    /* Show full image without cropping */
-    transition: transform 1s ease;
+    transition: transform 0.6s ease;
+    image-rendering: high-quality;
+    image-rendering: -webkit-optimize-contrast;
+    display: block;
+}
+
+.product-img img {
+    image-rendering: high-quality;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .modal-product-img:hover img {
