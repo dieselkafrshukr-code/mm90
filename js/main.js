@@ -586,4 +586,7 @@ function toggleTheme() {
     if (icon) icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-function showToast(msg) { /* ... defined elsewhere or inline ... */ }
+function closeSuccessModal() {
+    const modal = document.getElementById('success-modal');
+    if (modal) modal.classList.remove('active');
+}
