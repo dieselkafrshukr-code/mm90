@@ -28,12 +28,53 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     firebase.initializeApp(firebaseConfig);
     var db = firebase.firestore();
 
+    // Force Local Persistence for session stability
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    // Initial UI check from LocalStorage (for instant feedback before Firebase fires)
+    const cachedUser = localStorage.getItem('diesel_user_cache');
+    if (cachedUser) {
+        try {
+            const data = JSON.parse(cachedUser);
+            // Artificial delay to prevent flicker if Firebase is fast
+            renderAuthUI(data.name);
+        } catch (e) { }
+    }
+
     // Auth State Listener for Customers
     firebase.auth().onAuthStateChanged(user => {
         currentUser = user;
-        updateAuthUI();
-        if (user) loadCartFromFirebase();
+        if (user) {
+            const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
+            localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
+            updateAuthUI();
+            loadCartFromFirebase();
+        } else {
+            localStorage.removeItem('diesel_user_cache');
+            updateAuthUI();
+        }
     });
+}
+
+// Separate rendering from logic for reuse
+function renderAuthUI(name) {
+    const txt = document.getElementById('auth-text');
+    const cartLoggedOut = document.getElementById('cart-auth-logged-out');
+    const cartLoggedIn = document.getElementById('cart-auth-logged-in');
+    const cartUserName = document.getElementById('cart-user-name');
+
+    if (name) {
+        if (txt) txt.innerText = name;
+        if (cartLoggedOut) cartLoggedOut.style.display = 'none';
+        if (cartLoggedIn) {
+            cartLoggedIn.style.display = 'flex';
+            if (cartUserName) cartUserName.innerText = `أهلاً، ${name}`;
+        }
+    } else {
+        if (txt) txt.innerText = 'دخول';
+        if (cartLoggedOut) cartLoggedOut.style.display = 'block';
+        if (cartLoggedIn) cartLoggedIn.style.display = 'none';
+    }
 }
 
 // DOM Elements
@@ -484,24 +525,8 @@ async function signOutUser() {
 }
 
 function updateAuthUI() {
-    const txt = document.getElementById('auth-text');
-    const cartLoggedOut = document.getElementById('cart-auth-logged-out');
-    const cartLoggedIn = document.getElementById('cart-auth-logged-in');
-    const cartUserName = document.getElementById('cart-user-name');
-
-    if (currentUser) {
-        const name = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي';
-        txt.innerText = name;
-        if (cartLoggedOut) cartLoggedOut.style.display = 'none';
-        if (cartLoggedIn) {
-            cartLoggedIn.style.display = 'flex';
-            cartUserName.innerText = `أهلاً، ${name}`;
-        }
-    } else {
-        txt.innerText = 'دخول';
-        if (cartLoggedOut) cartLoggedOut.style.display = 'block';
-        if (cartLoggedIn) cartLoggedIn.style.display = 'none';
-    }
+    const name = currentUser ? (currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي') : null;
+    renderAuthUI(name);
 }
 
 window.openMyOrdersModal = () => {
