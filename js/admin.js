@@ -108,6 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 adminRole = role;
                 applyRoleRestrictions();
 
+                // Explicitly show the correct tab after login
+                if (role === 'products') { showTab('products'); }
+                else if (role === 'orders') { showTab('orders'); }
+                else if (role === 'all') { showTab('products'); }
+
             } catch (err) {
                 console.error(err);
                 errEl.innerText = "خطأ في تسجيل الدخول: " + err.message;
@@ -143,8 +148,14 @@ function applyRoleRestrictions() {
 }
 
 function showTab(tab) {
-    // Strict Role Check
+    // Strict Role Check - Allow if role exists
+    if (!adminRole || adminRole === 'none') {
+        // Try reading again from storage in case of race condition
+        adminRole = localStorage.getItem('adminRole') || 'none';
+    }
+
     if (adminRole === 'none') return;
+
     if (adminRole !== 'all' && adminRole !== tab) {
         console.warn("🚫 Access Denied to Tab:", tab);
         return;
@@ -324,16 +335,22 @@ if (saveProductForm) {
 }
 
 async function loadProducts() {
+    // Safety check for UI elements
+    if (!productsListBody) productsListBody = document.getElementById('products-list-body');
+    if (!productsListBody) return; // Still not ready
+
     if (adminRole !== 'all' && adminRole !== 'products') return;
     try {
         let allProducts = [];
         if (isFirebaseReady) {
-            const snapshot = await productsCol.orderBy('updatedAt', 'desc').get();
+            const snapshot = await productsCol.get();
             snapshot.forEach(doc => allProducts.push({ id: doc.id, ...doc.data() }));
+            allProducts.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
         }
         const localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
         allProducts = [...allProducts, ...localProds];
         const uniqueProds = Array.from(new Map(allProducts.map(item => [item.id, item])).values());
+
         let html = '';
         let cats = { clothes: 0, shoes: 0, pants: 0 };
         uniqueProds.forEach(p => {
@@ -342,9 +359,14 @@ async function loadProducts() {
             html += `<tr><td><img src="${p.image}" class="product-thumb"></td><td>${p.name}</td><td style="color:#d4af37; font-weight:bold;">${p.price} ج.م</td><td>${p.subCategory}</td><td class="actions"><i class="fas fa-edit btn-edit" onclick="editProduct('${p.id}')"></i><i class="fas fa-trash btn-delete" onclick="deleteProduct('${p.id}')"></i></td></tr>`;
         });
         productsListBody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">لا توجد منتجات.</td></tr>';
-        document.getElementById('stat-total').innerText = uniqueProds.length;
-        document.getElementById('stat-clothes').innerText = cats.clothes;
-        document.getElementById('stat-shoes').innerText = cats.shoes;
+
+        const totalEl = document.getElementById('stat-total');
+        const clothesEl = document.getElementById('stat-clothes');
+        const shoesEl = document.getElementById('stat-shoes');
+
+        if (totalEl) totalEl.innerText = uniqueProds.length;
+        if (clothesEl) clothesEl.innerText = cats.clothes;
+        if (shoesEl) shoesEl.innerText = cats.shoes;
     } catch (err) { console.error(err); }
 }
 
@@ -418,6 +440,7 @@ async function loadOrders() {
     if (!isFirebaseReady) return;
     if (adminRole !== 'all' && adminRole !== 'orders') return;
     const ordersList = document.getElementById('orders-list');
+    if (!ordersList) return; // UI not ready yet
     db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
         let html = ''; let newCount = 0;
         if (snapshot.empty) { ordersList.innerHTML = '<div style="text-align: center; padding: 50px; opacity: 0.5;">لا توجد طلبات بعد.</div>'; return; }

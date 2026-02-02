@@ -11,7 +11,7 @@ try {
 
 let selectedProductForSize = null;
 let selectedColor = null;
-let activeCategory = "men";
+let activeCategory = "all";
 let remoteProducts = []; // To store products from Firebase
 
 // Firebase Config (Must match admin.js)
@@ -238,12 +238,12 @@ function setupEventListeners() {
     }
 
     // Categories Sub-Filters
-    const mainCategoryButtons = document.querySelectorAll('.filter-btn');
+    const mainCategoryButtons = document.querySelectorAll('.main-filter-btn');
     mainCategoryButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             mainCategoryButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            activeCategory = btn.getAttribute('data-category');
+            activeCategory = btn.getAttribute('data-parent');
             renderSubFilters(activeCategory);
             renderAll();
         });
@@ -298,7 +298,11 @@ async function renderAll(subFilter = 'all') {
     menContainer.innerHTML = Array(4).fill(0).map(() => '<div class="product-skeleton"></div>').join('');
 
     const allData = await fetchProducts();
-    let filtered = allData.filter(p => p.parentCategory === activeCategory);
+    let filtered = allData;
+
+    if (activeCategory !== 'all') {
+        filtered = filtered.filter(p => p.parentCategory === activeCategory);
+    }
 
     if (subFilter !== 'all') {
         filtered = filtered.filter(p => p.subCategory === subFilter);
