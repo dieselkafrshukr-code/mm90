@@ -51,6 +51,7 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
 // Global Elements
 let productsListBody, subCatSelect, previewImg, globalLoader, colorVariantsContainer;
 let colorVariants = [];
+let remoteProducts = []; // Declare the missing variable 
 
 const subMap = {
     clothes: [
@@ -119,6 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 errEl.style.display = 'block';
             }
         };
+    }
+
+    // TRIGGER INITIAL LOAD IF ALREADY AUTHENTICATED
+    if (firebase.auth().currentUser) {
+        if (adminRole === 'products' || adminRole === 'all') { showTab('products'); loadProducts(); }
+        else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
     }
 });
 
@@ -345,7 +352,7 @@ async function fetchProducts() {
     } catch (e) { console.error("Local load error", e); }
 
     // 2. Load Firebase Products (Live)
-    if (typeof db !== 'undefined') {
+    if (isFirebaseReady && db) {
         try {
             const snapshot = await db.collection('products').get();
             const remote = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
