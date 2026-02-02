@@ -11,7 +11,7 @@ const firebaseConfig = {
 let db = null;
 let productsCol = null;
 let isFirebaseReady = false;
-let adminRole = localStorage.getItem('adminRole') || 'none'; // 'products' or 'orders'
+let adminRole = sessionStorage.getItem('adminRole') || 'none';
 
 // Initialize Firebase
 if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -23,27 +23,30 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     firebase.auth().onAuthStateChanged(user => {
         const loginOverlay = document.getElementById('login-overlay');
         const adminContent = document.getElementById('admin-main-content');
-        const isFreshLogin = sessionStorage.getItem('is_logging_in');
 
-        if (user && isFreshLogin) {
-            // SUCCESSFUL MANUAL LOGIN: Allow entry
+        // Security Check: Only allow if we have a user AND a fresh session flag
+        const hasActiveSession = sessionStorage.getItem('admin_active_session');
+
+        if (user && hasActiveSession) {
+            // Authorized Session
             loginOverlay.style.display = 'none';
             adminContent.style.display = 'block';
+
+            // Refresh adminRole from session
+            adminRole = sessionStorage.getItem('adminRole') || 'none';
             applyRoleRestrictions();
 
             if (adminRole === 'products') { showTab('products'); loadProducts(); }
             else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
             else if (adminRole === 'all') { showTab('products'); loadProducts(); }
-
-            // CRITICAL: Delay flag removal to ensure stable load, but it's gone for the next refresh.
-            setTimeout(() => sessionStorage.removeItem('is_logging_in'), 500);
         } else {
-            // NO USER OR REFRESH: Force logout and show login screen
+            // Unauthorized or Refreshed: Force login
             if (user) firebase.auth().signOut();
 
             loginOverlay.style.display = 'flex';
             adminContent.style.display = 'none';
-            localStorage.removeItem('adminRole');
+            sessionStorage.removeItem('adminRole');
+            sessionStorage.removeItem('admin_active_session');
             adminRole = 'none';
         }
     });
@@ -102,25 +105,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Set a flag that we are intentionally logging in now
-                sessionStorage.setItem('is_logging_in', 'true');
-
-                // Set persistence to SESSION so it doesn't stay logged in after closing the tab
-                await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+                // Set flags in SessionStorage (Lost when tab is closed)
+                sessionStorage.setItem('admin_active_session', 'true');
+                sessionStorage.setItem('adminRole', role);
 
                 // Standard Firebase Login with typed credentials
                 await firebase.auth().signInWithEmailAndPassword(email, pass);
 
-                localStorage.setItem('adminRole', role);
                 adminRole = role;
-
                 applyRoleRestrictions();
-                location.reload();
+
+                // No reload needed, onAuthStateChanged will handle it smoothly
 
             } catch (err) {
                 console.error(err);
                 errEl.innerText = "خطأ في تسجيل الدخول: " + err.message;
                 errEl.style.display = 'block';
+                // Reset flags on failure
+                sessionStorage.removeItem('admin_active_session');
             }
         };
     }
