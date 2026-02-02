@@ -332,7 +332,7 @@
             <button id="close-orders-modal" class="close-modal"><i class="fas fa-times"></i></button>
 
             <!-- Login Section (shown when not logged in) -->
-            <div id="orders-login-section" style="width: 100%;">
+            <div id="orders-login-section" style="width: 100%; display: none;">
                 <i class="fas fa-box-open"
                     style="font-size: 3.5rem; color: var(--primary); margin-bottom: 20px; display: block;"></i>
                 <h2 style="margin-bottom: 12px; font-weight: 900;">تتبع طلباتك</h2>
@@ -347,14 +347,18 @@
 
             <!-- Orders Section (shown when logged in) -->
             <div id="orders-list-section" style="display: none; width: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0;"><i class="fas fa-box"></i> طلباتي</h2>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="text-align: right;">
+                        <h2 style="margin: 0; font-size: 1.2rem;"><i class="fas fa-box"
+                                style="color: var(--primary);"></i> طلباتي</h2>
+                        <p id="user-email-display" style="font-size: 0.75rem; opacity: 0.6; margin: 3px 0 0;"></p>
+                    </div>
                     <button id="logout-btn"
-                        style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
-                        <i class="fas fa-sign-out-alt"></i> خروج
+                        style="background: #e20613; border: none; color: #fff; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
+                        <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
                     </button>
                 </div>
-                <p id="user-email-display" style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 20px;"></p>
 
                 <div id="my-orders-list">
                     <div style="text-align: center; padding: 30px; opacity: 0.5;">جاري تحميل الطلبات...</div>

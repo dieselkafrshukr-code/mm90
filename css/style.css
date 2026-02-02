@@ -1714,3 +1714,12 @@ footer {
 #form-total-price {
     color: var(--primary);
 }
+
+#logout-btn:hover {
+    background: var(--primary-dark) !important;
+    transform: scale(1.05);
+}
+
+#logout-btn:active {
+    transform: scale(0.98);
+}

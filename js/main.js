@@ -495,14 +495,17 @@ function updateAuthUI() {
 
 window.openMyOrdersModal = () => {
     const modal = document.getElementById('my-orders-modal');
+    const loginSection = document.getElementById('orders-login-section');
+    const listSection = document.getElementById('orders-list-section');
+
     if (currentUser) {
-        document.getElementById('orders-login-section').style.display = 'none';
-        document.getElementById('orders-list-section').style.display = 'block';
+        loginSection.style.display = 'none';
+        listSection.style.display = 'block';
         document.getElementById('user-email-display').innerText = currentUser.email;
         loadMyOrders();
     } else {
-        document.getElementById('orders-login-section').style.display = 'block';
-        document.getElementById('orders-list-section').style.display = 'none';
+        loginSection.style.display = 'block';
+        listSection.style.display = 'none';
     }
     modal.classList.add('active');
 };
