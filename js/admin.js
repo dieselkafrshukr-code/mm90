@@ -20,6 +20,14 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     productsCol = db.collection('products');
     isFirebaseReady = true;
 
+    // Force sign out on every page visit to admin to ensure no persistent login
+    // This is the "Nuclear" option to satisfy the "Ask every time" requirement
+    if (!localStorage.getItem('admin_logging_in')) {
+        firebase.auth().signOut();
+        localStorage.removeItem('adminRole');
+        adminRole = 'none';
+    }
+
     // Check Auth State Listener
     firebase.auth().onAuthStateChanged(user => {
         const loginOverlay = document.getElementById('login-overlay');
@@ -101,6 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Set a flag that we are intentionally logging in now
+                localStorage.setItem('admin_logging_in', 'true');
+
                 // Set persistence to SESSION so it doesn't stay logged in after closing the tab
                 await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
@@ -109,6 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 localStorage.setItem('adminRole', role);
                 adminRole = role;
+
+                // Clear the flag after a short delay so the next full page load will force logout
+                setTimeout(() => localStorage.removeItem('admin_logging_in'), 2000);
+
                 applyRoleRestrictions();
                 location.reload();
 
