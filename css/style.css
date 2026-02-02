@@ -1060,7 +1060,8 @@ footer {
 
 /* 6. Footer - Fixed at bottom */
 .cart-footer {
-    padding: 25px;
+    padding: 20px 25px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
     background: #0a0a0a;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 10;
@@ -1075,7 +1076,7 @@ footer {
 
 .cart-total span {
     color: #fff;
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 900;
 }
 
@@ -1111,6 +1112,21 @@ footer {
     .cart-item img {
         width: 80px;
         height: 100px;
+    }
+
+    .cart-footer {
+        padding: 15px 20px;
+        padding-bottom: calc(15px + env(safe-area-inset-bottom));
+    }
+
+    .checkout-btn {
+        padding: 14px;
+        font-size: 1.1rem;
+        border-radius: 12px;
+    }
+
+    .cart-total span {
+        font-size: 1.1rem;
     }
 }
 
