@@ -332,19 +332,21 @@
             <button id="close-orders-modal" class="close-modal"><i class="fas fa-times"></i></button>
 
             <!-- Login Section (shown when not logged in) -->
-            <div id="orders-login-section" style="text-align: center; padding: 30px 20px;">
-                <i class="fas fa-box-open" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px;"></i>
-                <h2 style="margin-bottom: 15px;">تتبع طلباتك</h2>
-                <p style="margin-bottom: 25px; opacity: 0.8;">سجل دخول بحساب جوجل لمتابعة حالة طلباتك</p>
+            <div id="orders-login-section" style="width: 100%;">
+                <i class="fas fa-box-open"
+                    style="font-size: 3.5rem; color: var(--primary); margin-bottom: 20px; display: block;"></i>
+                <h2 style="margin-bottom: 12px; font-weight: 900;">تتبع طلباتك</h2>
+                <p style="margin-bottom: 25px; opacity: 0.8; font-size: 0.95rem;">سجل دخول بحساب جوجل لمتابعة حالة
+                    طلباتك</p>
                 <button id="google-login-btn" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 10px; padding: 12px 30px;">
+                    style="display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 25px; width: 100%; max-width: 280px; margin: 0 auto;">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 20px;">
                     تسجيل الدخول بجوجل
                 </button>
             </div>
 
             <!-- Orders Section (shown when logged in) -->
-            <div id="orders-list-section" style="display: none;">
+            <div id="orders-list-section" style="display: none; width: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin: 0;"><i class="fas fa-box"></i> طلباتي</h2>
                     <button id="logout-btn"
