@@ -693,7 +693,7 @@ window.openMyOrdersModal = () => {
 
 window.signInWithGoogle = async () => {
     try {
-        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         const provider = new firebase.auth.GoogleAuthProvider();
         await firebase.auth().signInWithPopup(provider);
         showToast("تم تسجيل الدخول بنجاح ✅");
