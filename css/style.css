@@ -889,12 +889,12 @@ footer {
 .cart-sidebar {
     position: fixed;
     top: 0;
+    bottom: 0;
     right: 0;
     width: 400px;
     max-width: 100%;
     height: 100%;
     height: -webkit-fill-available;
-    height: 100dvh;
     background: #0a0a0a;
     z-index: 9999;
     box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
@@ -903,7 +903,6 @@ footer {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding-bottom: 0px !important;
 }
 
 .cart-sidebar.open {
@@ -1119,21 +1118,21 @@ footer {
 
     .cart-footer {
         padding: 25px 20px;
-        padding-bottom: 110px !important;
-        /* Force a huge safe distance from any mobile bars */
-        padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+        padding-bottom: 140px !important;
+        /* Extremely high padding to push it up */
+        padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important;
         background: #000;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
         flex-shrink: 0;
-        box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.8);
     }
 
     .checkout-btn {
-        height: 64px;
-        line-height: 64px;
+        height: 56px;
+        /* Slightly shorter to fit better */
+        line-height: 56px;
         padding: 0;
-        font-size: 1.25rem;
-        border-radius: 32px;
+        font-size: 1.15rem;
+        border-radius: 28px;
         display: block;
         text-align: center;
         width: 100%;
@@ -1142,6 +1141,8 @@ footer {
         font-weight: 800;
         box-shadow: 0 8px 25px rgba(226, 6, 19, 0.4);
         border: none;
+        margin-bottom: 20px;
+        /* Extra breathing room below the button */
     }
 
     #cart-auth-box {
