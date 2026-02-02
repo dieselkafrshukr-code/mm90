@@ -1236,8 +1236,7 @@ footer {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(20px);
+    background: rgba(0, 0, 0, 0.4);
     z-index: 9999;
     display: none;
     justify-content: center;
@@ -1514,8 +1513,8 @@ footer {
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border-radius: 35px;
-    width: 92%;
-    max-width: 550px;
+    width: 95%;
+    max-width: 800px;
     padding: 50px 35px;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.12);
