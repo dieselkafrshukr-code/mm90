@@ -325,7 +325,8 @@ if (saveProductForm) {
             colors: colorVariants.map(v => v.name),
             badge: document.getElementById('p-badge').value,
             image: document.getElementById('p-image-base64').value || (colorVariants.length > 0 && colorVariants[0].image ? colorVariants[0].image : (id ? undefined : 'https://placehold.co/400x600?text=No+Image')),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            status: id ? undefined : 'active' // Don't overwrite status on edit unless we add a UI for it, but set 'active' for new
         };
         try {
             // Check Document Size (Firestore Limit: 1MB)
@@ -404,7 +405,26 @@ async function loadProducts() {
         uniqueProds.forEach(p => {
             const cat = p.parentCategory || 'clothes';
             cats[cat] = (cats[cat] || 0) + 1;
-            html += `<tr><td><img src="${p.image}" class="product-thumb"></td><td>${p.name}</td><td style="color:#d4af37; font-weight:bold;">${p.price} ج.م</td><td>${p.subCategory}</td><td class="actions"><i class="fas fa-edit btn-edit" onclick="editProduct('${p.id}')"></i><i class="fas fa-trash btn-delete" onclick="deleteProduct('${p.id}')"></i></td></tr>`;
+            const isHidden = p.status === 'hidden';
+
+            html += `
+                <tr style="${isHidden ? 'opacity: 0.5; background: rgba(0,0,0,0.2);' : ''}">
+                    <td><img src="${p.image}" class="product-thumb"></td>
+                    <td>
+                        ${p.name}
+                        ${isHidden ? '<br><span style="font-size:0.7rem; color:#f44336; font-weight:bold;">[مخفي]</span>' : ''}
+                    </td>
+                    <td style="color:#d4af37; font-weight:bold;">${p.price} ج.م</td>
+                    <td>${p.subCategory}</td>
+                    <td class="actions">
+                        <i class="fas fa-edit btn-edit" onclick="editProduct('${p.id}')" title="تعديل"></i>
+                        <i class="fas ${isHidden ? 'fa-eye' : 'fa-eye-slash'} btn-delete" 
+                           style="color: ${isHidden ? '#4caf50' : '#ff9800'}" 
+                           onclick="toggleVisibility('${p.id}', ${isHidden})" 
+                           title="${isHidden ? 'إظهار المنتج' : 'إخفاء المنتج'}"></i>
+                        <i class="fas fa-trash btn-delete" onclick="deleteProduct('${p.id}')" title="حذف نهائي"></i>
+                    </td>
+                </tr>`;
         });
         productsListBody.innerHTML = html || '<tr><td colspan="5" style="text-align:center">لا توجد منتجات.</td></tr>';
 
@@ -418,8 +438,35 @@ async function loadProducts() {
     } catch (err) { console.error(err); }
 }
 
+async function toggleVisibility(id, currentlyHidden) {
+    const action = currentlyHidden ? "إظهار" : "إخفاء";
+    if (!confirm(`هل تريد ${action} هذا المنتج من الموقع؟`)) return;
+
+    showLoader(true);
+    const newStatus = currentlyHidden ? 'active' : 'hidden';
+    try {
+        if (isFirebaseReady && !id.startsWith('L')) {
+            await productsCol.doc(id).update({ status: newStatus, updatedAt: new Date().toISOString() });
+        }
+
+        // Update local if exists
+        let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
+        const idx = localProds.findIndex(p => p.id == id);
+        if (idx !== -1) {
+            localProds[idx].status = newStatus;
+            localProds[idx].updatedAt = new Date().toISOString();
+            localStorage.setItem('diesel_products', JSON.stringify(localProds));
+        }
+
+        loadProducts();
+    } catch (err) {
+        alert("فشل تغيير الحالة!");
+    }
+    showLoader(false);
+}
+
 async function deleteProduct(id) {
-    if (!confirm("هل أنت متأكد من حذف هذا المنتج نهائياً؟")) return;
+    if (!confirm("⚠️ هذا سيحذف المنتج تماماً ولن تتمكن من استعادته. هل أنت متأكد؟ (يفضل استخدام الإخفاء بدلاً من الحذف)")) return;
     showLoader(true);
     try {
         if (isFirebaseReady && !id.startsWith('L')) await productsCol.doc(id).delete();

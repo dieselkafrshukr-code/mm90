@@ -288,7 +288,8 @@ window.applySubFilter = (parent, subId, btn) => {
 
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
-    let filtered = remoteProducts;
+    // Hide products with status: 'hidden'
+    let filtered = remoteProducts.filter(p => p.status !== 'hidden');
 
     if (parent !== 'all') {
         if (parent === 'clothes') {
