@@ -246,7 +246,7 @@ async function handleVariantImage(input, id) {
     }
 }
 
-async function compressImage(base64, maxWidth = 800) {
+async function compressImage(base64, maxWidth = 1200) {
     return new Promise((resolve) => {
         const img = new Image();
         img.src = base64;
@@ -257,7 +257,7 @@ async function compressImage(base64, maxWidth = 800) {
             canvas.height = canvas.width / ratio;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
     });
 }
@@ -278,13 +278,13 @@ async function handleImage(input) {
             img.src = base64;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 450;
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
+                const MAX_WIDTH = 1200;
+                const scaleSize = Math.min(1, MAX_WIDTH / img.width);
+                canvas.width = img.width * scaleSize;
                 canvas.height = img.height * scaleSize;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9);
                 document.getElementById('p-image-base64').value = compressedBase64;
                 previewImg.src = compressedBase64;
                 previewImg.style.display = 'block';
