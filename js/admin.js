@@ -637,10 +637,12 @@ async function exportOrders() {
                 "التاريخ": dateStr,
                 "اسم العميل": o.customerName,
                 "رقم الهاتف": o.phone,
+                "الايميل": o.userEmail || 'زائر',
                 "العنوان": o.address,
                 "المنتجات": itemsList,
                 "الإجمالي": o.total + " ج.م",
-                "الحالة": o.status
+                "الحالة": o.status,
+                "حالة الدفع": o.paymentStatus || 'كاش/عند الاستلام'
             };
 
             allOrders.push(row);
@@ -680,7 +682,7 @@ async function exportOrders() {
         XLSX.utils.book_append_sheet(workbook, wsAll, "كافة الطلبات");
 
         // Column widths
-        const wscols = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 35 }, { wch: 50 }, { wch: 15 }, { wch: 15 }];
+        const wscols = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 35 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
         wsToday['!cols'] = wscols;
         wsAll['!cols'] = wscols;
         wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }];

@@ -58,10 +58,12 @@ async function generateDailyReport() {
                 "التاريخ": dateStr,
                 "اسم العميل": o.customerName || 'بدون اسم',
                 "رقم الهاتف": o.phone || 'بدون رقم',
+                "الايميل": o.userEmail || 'زائر',
                 "العنوان": o.address || 'بدون عنوان',
                 "المنتجات": itemsList,
                 "الإجمالي": o.total || 0,
                 "الحالة": o.status || 'جديد',
+                "حالة الدفع": o.paymentStatus || 'كاش/عند الاستلام',
                 "المعرف ID": doc.id
             };
 
@@ -108,7 +110,7 @@ async function generateDailyReport() {
 
         // ضبط عرض الأعمدة لكل الأوراق
         const cols = [
-            { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 35 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 25 }
+            { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 35 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }
         ];
         wsToday['!cols'] = cols;
         wsAll['!cols'] = cols;

@@ -25,6 +25,17 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     firebase.auth().onAuthStateChanged(user => {
         currentUser = user;
         updateAuthUI();
+        if (user) {
+            loadCartFromFirebase();
+        } else {
+            // Load from local storage for guests if needed, 
+            // but the user wants it linked to Google
+            const localCart = localStorage.getItem('diesel_cart');
+            if (localCart) {
+                cart = JSON.parse(localCart);
+                updateCartUI();
+            }
+        }
     });
 }
 
@@ -321,6 +332,7 @@ window.openSizeModal = (id) => {
 window.removeFromCart = (id) => {
     cart = cart.filter(i => i.cartId !== id);
     updateCartUI();
+    saveCartToFirebase();
 };
 
 window.updateCartQuantity = (id, delta) => {
@@ -331,6 +343,7 @@ window.updateCartQuantity = (id, delta) => {
             removeFromCart(id);
         } else {
             updateCartUI();
+            saveCartToFirebase();
         }
     }
 };
@@ -353,6 +366,7 @@ function confirmAddToCart(p, size) {
         cart.push({ ...p, cartId, size, color, quantity: 1, image: cartImage });
     }
     updateCartUI();
+    saveCartToFirebase();
     openCartSidebar();
 }
 
@@ -543,18 +557,78 @@ window.closeSuccessModal = () => {
     document.getElementById('success-modal').classList.remove('active');
 };
 
+// ========== CART FIREBASE SYNC ==========
+
+async function saveCartToFirebase() {
+    // Save to localStorage always as backup
+    localStorage.setItem('diesel_cart', JSON.stringify(cart));
+
+    if (!currentUser || typeof db === 'undefined') return;
+
+    try {
+        await db.collection('user_carts').doc(currentUser.uid).set({
+            items: cart,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error saving cart to Firebase:", error);
+    }
+}
+
+async function loadCartFromFirebase() {
+    if (!currentUser || typeof db === 'undefined') return;
+
+    try {
+        const doc = await db.collection('user_carts').doc(currentUser.uid).get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.items && data.items.length > 0) {
+                // Merge Logic: Add firebase items to local cart if they don't exist
+                const firebaseItems = data.items;
+
+                firebaseItems.forEach(fi => {
+                    const existing = cart.find(li => li.cartId === fi.cartId);
+                    if (!existing) {
+                        cart.push(fi);
+                    } else {
+                        // Use the higher quantity
+                        existing.quantity = Math.max(existing.quantity, fi.quantity);
+                    }
+                });
+
+                updateCartUI();
+                // Save the merged cart back to Firebase and LocalStorage
+                saveCartToFirebase();
+            }
+        } else {
+            // If no cart in Firebase, save the current local cart to Firebase
+            if (cart.length > 0) {
+                saveCartToFirebase();
+            }
+        }
+    } catch (error) {
+        console.error("Error loading cart from Firebase:", error);
+    }
+}
+
 // ========== CUSTOMER AUTH & ORDERS TRACKING ==========
 
 function updateAuthUI() {
     const authText = document.getElementById('auth-text');
+    const authBtn = document.getElementById('my-orders-btn');
     const cartAuthBox = document.getElementById('cart-auth-box');
+    const loginBanner = document.getElementById('login-prompt-banner');
 
     if (currentUser) {
-        if (authText) authText.innerText = 'طلباتي';
+        if (authText) authText.innerText = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي';
+        if (authBtn) authBtn.classList.add('logged-in');
         if (cartAuthBox) cartAuthBox.style.display = 'none';
+        if (loginBanner) loginBanner.style.display = 'none';
     } else {
         if (authText) authText.innerText = 'دخول';
+        if (authBtn) authBtn.classList.remove('logged-in');
         if (cartAuthBox) cartAuthBox.style.display = 'block';
+        if (loginBanner) loginBanner.style.display = 'block';
     }
 }
 
@@ -626,6 +700,11 @@ window.signInWithGoogle = async () => {
 window.signOutUser = async () => {
     try {
         await firebase.auth().signOut();
+        // Clear cart on logout
+        cart = [];
+        localStorage.removeItem('diesel_cart');
+        updateCartUI();
+
         showToast("تم تسجيل الخروج");
         const modal = document.getElementById('my-orders-modal');
         if (modal) modal.classList.remove('active');
