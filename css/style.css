@@ -84,11 +84,16 @@
     box-sizing: border-box;
 }
 
+/* Fix for horizontal scroll on mobile */
 html,
 body {
     width: 100%;
-    overflow-x: hidden;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden !important;
     position: relative;
+    -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -1114,7 +1119,7 @@ footer {
     .nav-links {
         position: fixed;
         top: 0;
-        right: -110%;
+        right: 0;
         width: 80%;
         height: 100vh;
         background: rgba(0, 0, 0, 0.98);
@@ -1125,10 +1130,13 @@ footer {
         gap: 30px;
         transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         z-index: 2500;
+        transform: translateX(110%);
+        visibility: hidden;
     }
 
     .nav-links.active {
-        right: 0;
+        transform: translateX(0);
+        visibility: visible;
     }
 
     .mobile-menu-btn {
@@ -1223,12 +1231,20 @@ footer {
         font-size: 2.2rem;
     }
 
+    .nav-icons {
+        gap: 8px;
+    }
+
     .nav-icons a {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 
     .logo img {
-        height: 30px;
+        height: 28px;
+    }
+
+    .nav-container {
+        padding: 0 10px;
     }
 }
 
