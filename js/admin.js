@@ -11,6 +11,7 @@ const firebaseConfig = {
 let db = null;
 let productsCol = null;
 let isFirebaseReady = false;
+let messaging = null; // Add messaging variable
 let adminRole = localStorage.getItem('adminRole') || 'none';
 
 // Initialize Firebase
@@ -39,13 +40,63 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
             applyRoleRestrictions();
 
             if (adminRole === 'products') { showTab('products'); loadProducts(); }
-            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
-            else if (adminRole === 'all') { showTab('products'); loadProducts(); }
+            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); setupRealtimeNotifications(); }
+            else if (adminRole === 'all') { showTab('products'); loadProducts(); setupRealtimeNotifications(); }
+
+            // Initialize FCM Messaging
+            initMessaging();
         } else {
             loginOverlay.style.display = 'flex';
             adminContent.style.display = 'none';
         }
     });
+}
+
+function initMessaging() {
+    if (firebase.messaging.isSupported()) {
+        messaging = firebase.messaging();
+        messaging.getToken({ vapidKey: 'BLz8n6V4mXo_kK9S_vE9_Q7U8R1H_X9G_v9A_V9A_V9A_V9A_V9A' }) // Placeholder VAPID, will likely fail without real one but sets structure
+            .then((currentToken) => {
+                if (currentToken) {
+                    db.collection('admin_tokens').doc('primary_admin').set({ token: currentToken, lastUpdated: new Date() });
+                }
+            }).catch((err) => console.log('An error occurred while retrieving token. ', err));
+    }
+}
+
+function setupRealtimeNotifications() {
+    if (!db) return;
+
+    // Request permission for browser notifications
+    if (Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+
+    // Listen to new orders
+    db.collection('orders')
+        .where('createdAt', '>', new Date()) // Only new orders since opening dashboard
+        .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === "added") {
+                    const order = change.doc.data();
+                    showOrderPushNotification(order);
+                }
+            });
+        });
+}
+
+function showOrderPushNotification(order) {
+    if (Notification.permission === "granted") {
+        const n = new Notification("🛍️ طلب جديد!", {
+            body: `قيمة الطلب: ${order.total} جنيه\nالعميل: ${order.customerName || order.userEmail}`,
+            icon: 'images/logo/logo.png'
+        });
+        n.onclick = () => { window.focus(); showTab('orders'); };
+
+        // Also play a sound if possible
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.play().catch(e => console.log("Sound blocked by browser"));
+    }
 }
 
 // Global Elements
