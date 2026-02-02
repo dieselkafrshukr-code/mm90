@@ -20,48 +20,31 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     productsCol = db.collection('products');
     isFirebaseReady = true;
 
-    // Nuclear Cleanup on EVERY page load to kill auto-login
-    // We use sessionStorage to allow the redirect after login to work, 
-    // but a fresh visit/refresh will always force logout.
-    const isNowLoggingIn = sessionStorage.getItem('is_logging_in');
-
-    if (!isNowLoggingIn) {
-        firebase.auth().signOut();
-        localStorage.clear();
-        adminRole = 'none';
-        console.log("🔒 Security: Fresh session required.");
-    }
-
     firebase.auth().onAuthStateChanged(user => {
         const loginOverlay = document.getElementById('login-overlay');
         const adminContent = document.getElementById('admin-main-content');
+        const isFreshLogin = sessionStorage.getItem('is_logging_in');
 
-        if (user && sessionStorage.getItem('is_logging_in')) {
-            // Once we are in, we clear the dynamic login flag. 
-            // This means a simple page REFRESH will now force a log out.
-            sessionStorage.removeItem('is_logging_in');
-
+        if (user && isFreshLogin) {
+            // SUCCESSFUL MANUAL LOGIN: Allow entry
             loginOverlay.style.display = 'none';
             adminContent.style.display = 'block';
             applyRoleRestrictions();
 
-            if (adminRole === 'products') {
-                showTab('products');
-                loadProducts();
-            } else if (adminRole === 'orders') {
-                showTab('orders');
-                loadOrders();
-            } else if (adminRole === 'all') {
-                showTab('products');
-                loadProducts();
-            }
+            if (adminRole === 'products') { showTab('products'); loadProducts(); }
+            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
+            else if (adminRole === 'all') { showTab('products'); loadProducts(); }
+
+            // CRITICAL: Delay flag removal to ensure stable load, but it's gone for the next refresh.
+            setTimeout(() => sessionStorage.removeItem('is_logging_in'), 500);
         } else {
-            // Force login screen if no user OR if was an old session
+            // NO USER OR REFRESH: Force logout and show login screen
+            if (user) firebase.auth().signOut();
+
             loginOverlay.style.display = 'flex';
             adminContent.style.display = 'none';
-            if (user && !sessionStorage.getItem('is_logging_in')) {
-                firebase.auth().signOut();
-            }
+            localStorage.removeItem('adminRole');
+            adminRole = 'none';
         }
     });
 }
