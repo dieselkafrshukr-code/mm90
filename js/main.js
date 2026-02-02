@@ -335,6 +335,9 @@ window.openSizeModal = (id) => {
     const colors = (p.colorVariants && p.colorVariants.length > 0) ? p.colorVariants.map(v => v.name) : ["أساسي"];
     colorContainer.innerHTML = colors.map((c, i) => `<button class="color-btn ${i === 0 ? 'selected' : ''}" onclick="modalSelectColor('${c}', this)">${c}</button>`).join('');
 
+    // Update selected color state
+    selectedColor = colors[0];
+
     // Initial Image for Color
     if (p.colorVariants && p.colorVariants[0] && p.colorVariants[0].image) document.getElementById('modal-img').src = p.colorVariants[0].image;
 
@@ -359,12 +362,25 @@ window.modalSelectColor = (color, btn) => {
 
 function renderModalSizes(p, color) {
     const container = document.querySelector('.size-options');
+    const sizeLabel = document.querySelector('.size-label:last-of-type');
+
     let sizes = p.sizes || [];
-    if (p.colorVariants) {
+    if (p.colorVariants && p.colorVariants.length > 0) {
         const v = p.colorVariants.find(x => x.name === color);
-        if (v && v.sizes && v.sizes.length > 0) sizes = v.sizes;
+        if (v && v.sizes && v.sizes.length > 0) {
+            sizes = v.sizes;
+        } else if (v) {
+            sizes = []; // This specific color has no sizes
+        }
     }
-    container.innerHTML = sizes.map(s => `<button class="size-btn" onclick="addToCartFromModal('${s}')">${s}</button>`).join('');
+
+    if (sizes.length > 0) {
+        if (sizeLabel) sizeLabel.style.display = 'block';
+        container.innerHTML = sizes.map(s => `<button class="size-btn" onclick="addToCartFromModal('${s}')">${s}</button>`).join('');
+    } else {
+        if (sizeLabel) sizeLabel.style.display = 'none';
+        container.innerHTML = '<p style="color:var(--primary); font-weight:bold; width:100%; margin:10px 0;">عفواً، هذا اللون غير متوفر حالياً</p>';
+    }
 }
 
 window.addToCartFromModal = (size) => {
