@@ -24,9 +24,9 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     // Auth State Listener
     firebase.auth().onAuthStateChanged(user => {
         currentUser = user;
-        updateAuthUI();
-        if (user) {
-            loadCartFromFirebase();
+        if (window.initialized) {
+            updateAuthUI();
+            if (user) loadCartFromFirebase();
         }
     });
 }
@@ -41,7 +41,9 @@ const initAll = () => {
     initElements();
     initTheme();
     setupEventListeners();
-    updateCartUI(); // Sync UI with initialized cart
+    updateAuthUI(); // Update UI if auth triggered before init
+    updateCartUI(); // Initial UI sync
+    if (currentUser) loadCartFromFirebase(); // Sync if logged in
     renderAll();
 
     // Auto-hide loader (Slowed down for more premium feel)
@@ -368,9 +370,13 @@ function updateCartUI() {
     const counts = document.querySelectorAll('.cart-count');
     const list = document.getElementById('cart-items-list');
     const totalEl = document.getElementById('cart-total-price');
-    const totalQty = cart.reduce((s, i) => s + i.quantity, 0);
 
+    // Always update the count badges if they exist
+    const totalQty = cart.reduce((s, i) => s + i.quantity, 0);
     counts.forEach(c => c.innerText = totalQty);
+
+    // Stop if the sidebar elements aren't ready yet
+    if (!list || !totalEl) return;
 
     if (cart.length === 0) {
         list.innerHTML = '<p class="empty-msg">السلة فارغة حالياً</p>';
