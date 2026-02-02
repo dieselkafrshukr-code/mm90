@@ -892,15 +892,16 @@ footer {
     right: 0;
     width: 400px;
     max-width: 100%;
-    height: 100vh;
+    height: 100%;
+    height: 100dvh;
     background: #0a0a0a;
-    /* Very dark background */
     z-index: 9999;
     box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
     transform: translateX(110%);
     transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .cart-sidebar.open {
@@ -1115,14 +1116,18 @@ footer {
     }
 
     .cart-footer {
-        padding: 15px 20px;
-        padding-bottom: calc(15px + env(safe-area-inset-bottom));
+        padding: 12px 15px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
     }
 
     .checkout-btn {
-        padding: 14px;
-        font-size: 1.1rem;
-        border-radius: 12px;
+        padding: 12px;
+        font-size: 1rem;
+        border-radius: 10px;
+    }
+
+    #cart-auth-box {
+        padding: 10px !important;
     }
 
     .cart-total span {
