@@ -1508,57 +1508,85 @@ footer {
     }
 }
 
-/* Clean Modern Modal Box */
+/* Premium Luxury Modal Redesign */
 .modal-box {
-    background: #0d0d0d;
-    border-radius: 24px;
-    width: 95%;
-    max-width: 500px;
-    padding: 40px 30px;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-radius: 35px;
+    width: 92%;
+    max-width: 550px;
+    padding: 50px 35px;
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
-    max-height: 90vh;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    max-height: 85vh;
     overflow-y: auto;
-    text-align: right;
-    animation: modalBoxPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+    animation: modalPremiumPop 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes modalBoxPop {
-    from {
-        transform: scale(0.9);
+@keyframes modalPremiumPop {
+    0% {
+        transform: scale(0.95) translateY(30px);
         opacity: 0;
+        filter: blur(10px);
     }
 
-    to {
-        transform: scale(1);
+    100% {
+        transform: scale(1) translateY(0);
         opacity: 1;
+        filter: blur(0);
     }
 }
 
 .modal-box .close-modal {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
+    top: 25px;
+    right: 25px;
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-box .close-modal:hover {
+    background: var(--primary);
+    transform: rotate(90deg);
 }
 
 .order-card-mini {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+    text-align: right;
+}
+
+.order-card-mini:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
 }
 
 .order-card-mini .order-status {
     display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: 6px 15px;
+    border-radius: 100px;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .order-status.status-new {
@@ -1579,4 +1607,62 @@ footer {
 .order-status.status-delivered {
     background: #4caf50;
     color: #fff;
+}
+
+.order-form {
+    margin-top: 20px;
+}
+
+.order-form .form-group {
+    margin-bottom: 25px;
+    text-align: right;
+}
+
+.order-form label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.order-form input,
+.order-form textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 15px 20px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    outline: none;
+    text-align: right;
+}
+
+.order-form input:focus,
+.order-form textarea:focus {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 20px rgba(226, 6, 19, 0.2);
+}
+
+.order-summary-mini {
+    background: rgba(226, 6, 19, 0.05);
+    border: 1px dashed rgba(226, 6, 19, 0.3);
+    border-radius: 15px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+#form-total-price {
+    color: var(--primary);
 }
