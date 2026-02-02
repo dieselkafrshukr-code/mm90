@@ -89,8 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Keep the role logic based on the password typed
                 let role = 'none';
-                if (pass === 'admin123') role = 'products';
-                else if (pass === 'admin1234') role = 'orders';
+                if (pass === '123456123456') role = 'products';
+                else if (pass === '1234512345') role = 'orders';
                 else {
                     errEl.innerText = "كلمة السر غير صحيحة لصلاحيات الأدمن ❌";
                     errEl.style.display = 'block';
