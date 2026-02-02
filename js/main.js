@@ -1,5 +1,5 @@
 // 🚀 DIESEL SHOP - INVINCIBLE ENGINE
-let cart = [];
+let cart = JSON.parse(localStorage.getItem('diesel_cart') || '[]');
 let selectedProductForSize = null;
 let selectedColor = null;
 let activeCategory = "men";
@@ -27,14 +27,6 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
         updateAuthUI();
         if (user) {
             loadCartFromFirebase();
-        } else {
-            // Load from local storage for guests if needed, 
-            // but the user wants it linked to Google
-            const localCart = localStorage.getItem('diesel_cart');
-            if (localCart) {
-                cart = JSON.parse(localCart);
-                updateCartUI();
-            }
         }
     });
 }
@@ -49,6 +41,7 @@ const initAll = () => {
     initElements();
     initTheme();
     setupEventListeners();
+    updateCartUI(); // Sync UI with initialized cart
     renderAll();
 
     // Auto-hide loader (Slowed down for more premium feel)
