@@ -246,20 +246,9 @@ async function handleVariantImage(input, id) {
     }
 }
 
-async function compressImage(base64, maxWidth = 1200) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.src = base64;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ratio = img.width / img.height;
-            canvas.width = Math.min(maxWidth, img.width);
-            canvas.height = canvas.width / ratio;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
-        };
-    });
+async function compressImage(base64) {
+    // Zero compression: Return original base64 to preserve 100% quality and aspect ratio
+    return base64;
 }
 
 function updateSubCats() {
@@ -271,26 +260,19 @@ function updateSubCats() {
 
 async function handleImage(input) {
     if (input.files && input.files[0]) {
+        const file = input.files[0];
+        if (file.size > 2 * 1024 * 1024) { // 2MB Limit safety
+            alert("الصورة كبيرة جداً! يرجى اختيار صورة أقل من 2 ميجا للحفاظ على سرعة الموقع.");
+            return;
+        }
         const reader = new FileReader();
         reader.onload = function (e) {
-            const base64 = e.target.result;
-            const img = new Image();
-            img.src = base64;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1200;
-                const scaleSize = Math.min(1, MAX_WIDTH / img.width);
-                canvas.width = img.width * scaleSize;
-                canvas.height = img.height * scaleSize;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.9);
-                document.getElementById('p-image-base64').value = compressedBase64;
-                previewImg.src = compressedBase64;
-                previewImg.style.display = 'block';
-            };
+            const originalBase64 = e.target.result;
+            document.getElementById('p-image-base64').value = originalBase64;
+            previewImg.src = originalBase64;
+            previewImg.style.display = 'block';
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 }
 
