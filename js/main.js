@@ -152,6 +152,16 @@ function setupEventListeners() {
         };
     }
 
+    // Admin Panel Shortcut
+    const adminBtn = document.getElementById('admin-login-btn');
+    if (adminBtn) {
+        adminBtn.style.cursor = 'pointer';
+        adminBtn.onclick = (e) => {
+            e.preventDefault();
+            window.location.href = 'admin.html';
+        };
+    }
+
     // Theme Toggle
     if (themeToggle) {
         themeToggle.onclick = toggleTheme;
