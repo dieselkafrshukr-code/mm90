@@ -258,11 +258,12 @@ function renderSubFilters(category) {
     const subs = parentSubMap[category] || [];
 
     if (subs.length > 0) {
+        subFiltersContainer.classList.add('active');
         subFiltersContainer.style.display = 'flex';
-        subFiltersContainer.innerHTML = '<button class="sub-filter-btn active" data-sub="all">الكل</button>' +
-            subs.map(s => `<button class="sub-filter-btn" data-sub="${s.id}">${s.label}</button>`).join('');
+        subFiltersContainer.innerHTML = '<button class="sub-btn active" data-sub="all">الكل</button>' +
+            subs.map(s => `<button class="sub-btn" data-sub="${s.id}">${s.label}</button>`).join('');
 
-        const subBtns = subFiltersContainer.querySelectorAll('.sub-filter-btn');
+        const subBtns = subFiltersContainer.querySelectorAll('.sub-btn');
         subBtns.forEach(b => {
             b.onclick = () => {
                 subBtns.forEach(x => x.classList.remove('active'));
@@ -271,6 +272,7 @@ function renderSubFilters(category) {
             };
         });
     } else {
+        subFiltersContainer.classList.remove('active');
         subFiltersContainer.style.display = 'none';
         subFiltersContainer.innerHTML = '';
     }
