@@ -20,25 +20,29 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
     productsCol = db.collection('products');
     isFirebaseReady = true;
 
-    // IMMEDIATE NUCLEAR SIGNOUT - No session survives this page load
-    if (!localStorage.getItem('admin_logging_in')) {
-        firebase.auth().signOut().then(() => {
-            console.log("🔒 Security: All sessions cleared.");
-            localStorage.clear(); // Clear EVERYTHING to be 100% sure
-            sessionStorage.clear();
-        });
+    // Nuclear Cleanup on EVERY page load to kill auto-login
+    // We use sessionStorage to allow the redirect after login to work, 
+    // but a fresh visit/refresh will always force logout.
+    const isNowLoggingIn = sessionStorage.getItem('is_logging_in');
+
+    if (!isNowLoggingIn) {
+        firebase.auth().signOut();
+        localStorage.clear();
         adminRole = 'none';
+        console.log("🔒 Security: Fresh session required.");
     }
 
-    // Check Auth State Listener
     firebase.auth().onAuthStateChanged(user => {
         const loginOverlay = document.getElementById('login-overlay');
         const adminContent = document.getElementById('admin-main-content');
 
-        if (user) {
+        if (user && sessionStorage.getItem('is_logging_in')) {
+            // Once we are in, we clear the dynamic login flag. 
+            // This means a simple page REFRESH will now force a log out.
+            sessionStorage.removeItem('is_logging_in');
+
             loginOverlay.style.display = 'none';
             adminContent.style.display = 'block';
-
             applyRoleRestrictions();
 
             if (adminRole === 'products') {
@@ -48,12 +52,16 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
                 showTab('orders');
                 loadOrders();
             } else if (adminRole === 'all') {
-                showTab('products'); // Default for owner
+                showTab('products');
                 loadProducts();
             }
         } else {
+            // Force login screen if no user OR if was an old session
             loginOverlay.style.display = 'flex';
             adminContent.style.display = 'none';
+            if (user && !sessionStorage.getItem('is_logging_in')) {
+                firebase.auth().signOut();
+            }
         }
     });
 }
@@ -112,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Set a flag that we are intentionally logging in now
-                localStorage.setItem('admin_logging_in', 'true');
+                sessionStorage.setItem('is_logging_in', 'true');
 
                 // Set persistence to SESSION so it doesn't stay logged in after closing the tab
                 await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
@@ -122,9 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 localStorage.setItem('adminRole', role);
                 adminRole = role;
-
-                // Clear the flag after a short delay so the next full page load will force logout
-                setTimeout(() => localStorage.removeItem('admin_logging_in'), 2000);
 
                 applyRoleRestrictions();
                 location.reload();
