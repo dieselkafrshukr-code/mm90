@@ -222,13 +222,22 @@
 
         <!-- Auth Prompt in Cart -->
         <div id="cart-auth-box"
-            style="padding: 15px; background: rgba(212, 175, 55, 0.1); border-bottom: 1px solid rgba(212, 175, 55, 0.2); text-align: center; display: none;">
-            <p style="font-size: 0.85rem; margin-bottom: 10px;">سجل دخولك لمتابعة طلبك لاحقاً</p>
-            <button onclick="signInWithGoogle()"
-                style="background: #fff; color: #000; border: none; padding: 6px 15px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 14px;">
-                تسجيل دخول بجوجل
-            </button>
+            style="padding: 15px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
+            <div id="cart-auth-logged-out">
+                <p style="font-size: 0.85rem; margin-bottom: 10px; opacity: 0.7;">سجل دخولك لمتابعة طلبك لاحقاً</p>
+                <button onclick="signInWithGoogle()"
+                    style="background: #fff; color: #000; border: none; padding: 8px 15px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto;">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 14px;">
+                    بدخول بجوجل
+                </button>
+            </div>
+            <div id="cart-auth-logged-in" style="display: none; align-items: center; justify-content: space-between;">
+                <span id="cart-user-name" style="font-size: 0.85rem; font-weight: bold;"></span>
+                <button onclick="signOutUser()"
+                    style="background: rgba(226, 6, 19, 0.1); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
+                    خروج <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
         </div>
 
         <div class="cart-items" id="cart-items-list">

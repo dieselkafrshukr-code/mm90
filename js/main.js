@@ -484,12 +484,22 @@ async function signOutUser() {
 
 function updateAuthUI() {
     const txt = document.getElementById('auth-text');
+    const cartLoggedOut = document.getElementById('cart-auth-logged-out');
+    const cartLoggedIn = document.getElementById('cart-auth-logged-in');
+    const cartUserName = document.getElementById('cart-user-name');
+
     if (currentUser) {
-        txt.innerText = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي';
-        document.getElementById('cart-auth-box').style.display = 'none';
+        const name = currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي';
+        txt.innerText = name;
+        if (cartLoggedOut) cartLoggedOut.style.display = 'none';
+        if (cartLoggedIn) {
+            cartLoggedIn.style.display = 'flex';
+            cartUserName.innerText = `أهلاً، ${name}`;
+        }
     } else {
         txt.innerText = 'دخول';
-        document.getElementById('cart-auth-box').style.display = 'block';
+        if (cartLoggedOut) cartLoggedOut.style.display = 'block';
+        if (cartLoggedIn) cartLoggedIn.style.display = 'none';
     }
 }
 
