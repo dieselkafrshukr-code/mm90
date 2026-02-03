@@ -361,7 +361,8 @@ if (saveProductForm) {
         e.preventDefault();
         showLoader(true);
         const id = document.getElementById('edit-id').value;
-        const data = {
+
+        let data = {
             name: document.getElementById('p-name').value,
             price: Number(document.getElementById('p-price').value),
             category: "men",
@@ -369,19 +370,37 @@ if (saveProductForm) {
             subCategory: document.getElementById('p-subcategory').value,
             sizes: document.getElementById('p-sizes').value.split(',').map(s => s.trim()).filter(s => s),
             colorVariants: colorVariants.map(v => ({
-                name: v.name,
-                image: v.image,
+                name: v.name || "",
+                image: v.image || "",
                 sizes: v.sizes ? v.sizes.split(',').map(s => s.trim()).filter(s => s) : []
             })),
-            colors: colorVariants.map(v => v.name),
-            badge: document.getElementById('p-badge').value,
-            image: document.getElementById('p-image-base64').value || (colorVariants.length > 0 && colorVariants[0].image ? colorVariants[0].image : (id ? undefined : 'https://placehold.co/400x600?text=No+Image')),
-            updatedAt: new Date().toISOString(),
-            status: id ? undefined : 'active' // Don't overwrite status on edit unless we add a UI for it, but set 'active' for new
+            colors: colorVariants.map(v => v.name || ""),
+            badge: document.getElementById('p-badge').value || "",
+            updatedAt: new Date().toISOString()
         };
+
+        // Handle Image
+        const imgInput = document.getElementById('p-image-base64').value;
+        const variantImg = colorVariants.length > 0 && colorVariants[0].image ? colorVariants[0].image : null;
+
+        if (imgInput && imgInput !== "undefined") {
+            data.image = imgInput;
+        } else if (variantImg) {
+            data.image = variantImg;
+        } else if (!id) {
+            data.image = 'https://placehold.co/400x600?text=No+Image';
+        }
+
+        if (!id) {
+            data.status = 'active';
+        }
+
+        // SANITIZE DATA
+        const finalData = sanitizeFirestoreData(data);
+
         try {
             // Check Document Size (Firestore Limit: 1MB)
-            const stringData = JSON.stringify(data);
+            const stringData = JSON.stringify(finalData);
             const sizeInBytes = new Blob([stringData]).size;
             if (isFirebaseReady && sizeInBytes > 1000000) {
                 showLoader(false);
@@ -389,16 +408,16 @@ if (saveProductForm) {
             }
 
             if (isFirebaseReady) {
-                if (id) await productsCol.doc(id).update(data);
-                else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await productsCol.add(data); }
+                if (id) await productsCol.doc(id).update(finalData);
+                else { finalData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await productsCol.add(finalData); }
             } else {
                 let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
-                if (id) { const idx = localProds.findIndex(p => p.id == id); if (idx !== -1) { if (!data.image) data.image = localProds[idx].image; localProds[idx] = { ...localProds[idx], ...data }; } }
-                else { data.id = 'L' + Date.now(); data.createdAt = new Date().toISOString(); localProds.push(data); }
+                if (id) { const idx = localProds.findIndex(p => p.id == id); if (idx !== -1) { if (!finalData.image) finalData.image = localProds[idx].image; localProds[idx] = { ...localProds[idx], ...finalData }; } }
+                else { finalData.id = 'L' + Date.now(); finalData.createdAt = new Date().toISOString(); localProds.push(finalData); }
                 localStorage.setItem('diesel_products', JSON.stringify(localProds));
             }
             alert("تم الحفظ بنجاح! ✅"); toggleForm(); loadProducts();
-        } catch (err) { console.error(err); alert("حدث خطأ! ❌"); }
+        } catch (err) { console.error(err); alert("حدث خطأ! ❌\n" + (err.message || err)); }
         showLoader(false);
     };
 }
@@ -544,9 +563,9 @@ async function editProduct(id) {
     colorVariants = (p.colorVariants || (p.colors || []).map(c => ({ name: c, image: '', sizes: '' }))).map(v => ({ ...v, id: Math.random(), sizes: Array.isArray(v.sizes) ? v.sizes.join(', ') : (v.sizes || '') }));
     renderColorVariants();
     document.getElementById('p-badge').value = p.badge || '';
-    document.getElementById('p-image-base64').value = p.image;
-    previewImg.src = p.image;
-    previewImg.style.display = 'block';
+    document.getElementById('p-image-base64').value = p.image || "";
+    previewImg.src = p.image || "";
+    previewImg.style.display = p.image ? 'block' : 'none';
     document.getElementById('form-title').innerText = 'تعديل المنتج';
     document.getElementById('productForm').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -642,4 +661,19 @@ async function exportOrders() {
         alert("تم التصدير بنجاح!");
     } catch (err) { alert("خطأ في التصدير!"); }
     showLoader(false);
+}
+
+function sanitizeFirestoreData(obj) {
+    if (obj === undefined) return undefined;
+    if (obj === null) return null;
+    if (Array.isArray(obj)) return obj.map(v => sanitizeFirestoreData(v)).filter(v => v !== undefined);
+    if (typeof obj === 'object') {
+        const newObj = {};
+        for (const key in obj) {
+            const val = sanitizeFirestoreData(obj[key]);
+            if (val !== undefined) newObj[key] = val;
+        }
+        return newObj;
+    }
+    return obj;
 }
