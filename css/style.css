@@ -1334,8 +1334,9 @@ footer {
     z-index: 9999;
     display: none;
     justify-content: center;
-    align-items: center;
-    padding: 20px;
+    align-items: flex-start;
+    padding: 40px 20px;
+    overflow-y: auto;
     animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
