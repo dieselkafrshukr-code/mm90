@@ -18,5 +18,16 @@ service cloud.firestore {
     match /user_carts/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // الإعدادات: الجميع يقرأ والمدير يعدل
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // توكنات الإشعارات
+    match /admin_tokens/{tokenId} {
+       allow read, write: if request.auth != null;
+    }
   }
 }

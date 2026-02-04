@@ -180,9 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // TRIGGER INITIAL LOAD IF ALREADY AUTHENTICATED
     if (firebase.auth().currentUser) {
-        if (adminRole === 'products' || adminRole === 'all') { showTab('products'); loadProducts(); }
-        else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
-        else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
+        // Give it a tiny delay to ensure everything is ready
+        setTimeout(() => {
+            if (adminRole === 'products' || adminRole === 'all') { showTab('products'); loadProducts(); }
+            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
+            else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
+        }, 500);
     }
 });
 
@@ -220,7 +223,10 @@ async function saveShippingCosts() {
     try {
         await db.collection('settings').doc('shipping').set({ costs, updatedAt: new Date().toISOString() });
         alert("تم حفظ تكاليف الشحن بنجاح! 🚚✅");
-    } catch (e) { alert("حدث خطأ أثناء الحفظ!"); }
+    } catch (e) {
+        console.error("Save error:", e);
+        alert("حدث خطأ أثناء الحفظ! ❌\n" + (e.message || "تأكد من صلاحيات الأدمن"));
+    }
     showLoader(false);
 }
 
@@ -281,6 +287,7 @@ function showTab(tab) {
         document.getElementById('products-section').style.display = 'block';
         document.getElementById('orders-section').style.display = 'none';
         document.getElementById('shipping-section').style.display = 'none';
+        loadProducts();
     } else if (tab === 'orders') {
         document.getElementById('products-section').style.display = 'none';
         document.getElementById('orders-section').style.display = 'block';
@@ -497,6 +504,7 @@ async function fetchProducts() {
         try {
             const snapshot = await db.collection('products').get();
             const remote = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log(`Fetched ${remote.length} products from Firebase`);
 
             // Merge: Remote products overwrite local if IDs match, otherwise add
             remote.forEach(rp => {
@@ -510,10 +518,12 @@ async function fetchProducts() {
     }
 
     // 3. Fallback to hardcoded products if everything is empty
-    if (allP.length === 0 && typeof products !== 'undefined') {
+    if (allP.length === 0 && typeof products !== 'undefined' && products.length > 0) {
+        console.log("Using fallback products data");
         allP = products;
     }
 
+    console.log(`Total products loaded: ${allP.length}`);
     remoteProducts = allP;
     return allP;
 }
