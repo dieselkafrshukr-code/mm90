@@ -1608,7 +1608,7 @@ footer {
     border-radius: 20px;
     width: 90%;
     max-width: 400px;
-    padding: 50px 30px;
+    padding: 80px 30px 40px;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9);
@@ -1617,7 +1617,7 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
     animation: modalPremiumPop 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
