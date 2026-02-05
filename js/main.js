@@ -212,16 +212,6 @@ function setupEventListeners() {
 
     if (themeToggle) themeToggle.onclick = (e) => { e.preventDefault(); toggleTheme(); };
 
-    // Admin Panel Link
-    const adminBtn = document.getElementById('admin-login-btn');
-    if (adminBtn) {
-        adminBtn.onclick = (e) => {
-            e.preventDefault();
-            sessionStorage.setItem('force_admin_login', 'true');
-            window.location.href = "admin.html";
-        };
-    }
-
     if (closeModal) closeModal.onclick = () => sizeModal.classList.remove('active');
 
     // Checkout Button - MUST OPEN MODAL

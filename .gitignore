@@ -9,3 +9,9 @@ Thumbs.db
 # Local server config
 node_modules/
 package-lock.json
+
+# Admin Panel Files
+admin.html
+js/admin.js
+diesel-admin-panel/
+diesel-admin-panel.zip
