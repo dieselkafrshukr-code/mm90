@@ -559,6 +559,8 @@ img {
 /* UI Global Components (Google Login style - 1:1 REPLICA) */
 .btn-google-login {
     display: flex !important;
+    flex-direction: row-reverse !important;
+    /* Icon on the Right for RTL feel */
     align-items: center !important;
     justify-content: flex-start !important;
     background: #e20613 !important;
@@ -585,9 +587,10 @@ img {
 }
 
 .btn-google-login .google-icon-wrapper {
-    background: transparent;
-    width: 50px;
-    height: 50px;
+    background: #fff;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -597,8 +600,7 @@ img {
 .btn-google-login span {
     flex: 1;
     text-align: center;
-    padding-left: 10px;
-    padding-right: 0;
+    padding-right: 15px;
 }
 
 .btn-google-login img {

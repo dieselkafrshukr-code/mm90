@@ -569,7 +569,11 @@ function openMyOrdersModal() {
         loadMyOrders();
     } else {
         console.log("⚠️ المستخدم غير مسجل، عرض صفحة تسجيل الدخول");
-        if (loginSection) loginSection.style.display = 'flex';
+        if (loginSection) {
+            loginSection.style.display = 'flex';
+            loginSection.style.flexDirection = 'column';
+            loginSection.style.alignItems = 'center';
+        }
         if (ordersSection) ordersSection.style.display = 'none';
     }
 }
