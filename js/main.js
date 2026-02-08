@@ -598,9 +598,9 @@ async function loadMyOrders() {
     try {
         console.log("🔍 البحث عن طلبات المستخدم:", currentUser.email);
 
+        // Removed orderBy to avoid index requirement - will sort on client side
         const snapshot = await db.collection('orders')
             .where('userEmail', '==', currentUser.email)
-            .orderBy('createdAt', 'desc')
             .get();
 
         console.log(`📦 تم العثور على ${snapshot.docs.length} طلب`);
@@ -610,9 +610,17 @@ async function loadMyOrders() {
             return;
         }
 
-        list.innerHTML = snapshot.docs.map(doc => {
-            const o = doc.data();
-            console.log("📄 طلب:", doc.id, o);
+        // Sort orders by createdAt on client side
+        const orders = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => {
+                const aTime = a.createdAt?.toMillis() || 0;
+                const bTime = b.createdAt?.toMillis() || 0;
+                return bTime - aTime; // Newest first
+            });
+
+        list.innerHTML = orders.map(o => {
+            console.log("📄 طلب:", o.id, o);
 
             return `
                 <div class="order-card-mini" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
