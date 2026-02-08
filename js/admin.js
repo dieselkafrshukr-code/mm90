@@ -14,15 +14,7 @@ let productsCol = null;
 let isFirebaseReady = false;
 let adminRole = localStorage.getItem('adminRole') || 'none';
 
-const governorates = [
-    "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية",
-    "البحر الأحمر", "البحيرة", "الفيوم", "الغربية",
-    "الإسماعيلية", "المنوفية", "المنيا", "القليوبية",
-    "الوادي الجديد", "السويس", "الشرقية", "دمياط",
-    "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح",
-    "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف",
-    "أسيوط", "أسوان"
-];
+
 
 // Initialize Firebase
 try {
@@ -43,7 +35,6 @@ try {
 
                 if (adminRole === 'all' || adminRole === 'products') { showTab('products'); loadProducts(); }
                 else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
-                else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
             } else {
                 if (loginOverlay) loginOverlay.style.display = 'flex';
                 if (adminContent) adminContent.style.display = 'none';
@@ -70,27 +61,23 @@ function showTab(tab) {
 
     document.getElementById('products-section').style.display = 'none';
     document.getElementById('orders-section').style.display = 'none';
-    document.getElementById('shipping-section').style.display = 'none';
     const section = document.getElementById(`${tab}-section`);
     if (section) section.style.display = 'block';
 
     if (tab === 'products') loadProducts();
     else if (tab === 'orders') loadOrders();
-    else if (tab === 'shipping') loadShippingCosts();
 }
 
 function applyRoleRestrictions() {
     const tabProducts = document.getElementById('tab-products');
     const tabOrders = document.getElementById('tab-orders');
-    const tabShipping = document.getElementById('tab-shipping');
 
     const hide = (el) => el && (el.style.display = 'none');
     const show = (el) => el && (el.style.display = 'flex');
 
-    if (adminRole === 'products') { show(tabProducts); hide(tabOrders); hide(tabShipping); }
-    else if (adminRole === 'orders') { hide(tabProducts); show(tabOrders); hide(tabShipping); }
-    else if (adminRole === 'shipping') { hide(tabProducts); hide(tabOrders); show(tabShipping); }
-    else if (adminRole === 'all') { show(tabProducts); show(tabOrders); show(tabShipping); }
+    if (adminRole === 'products') { show(tabProducts); hide(tabOrders); }
+    else if (adminRole === 'orders') { hide(tabProducts); show(tabOrders); }
+    else if (adminRole === 'all') { show(tabProducts); show(tabOrders); }
 }
 
 async function loadProducts() {
@@ -295,53 +282,8 @@ async function loadOrders() {
     } catch (e) { console.error("Load orders error", e); }
 }
 
-async function loadShippingCosts() {
-    if (!db) return;
-    try {
-        const doc = await db.collection('settings').doc('shipping').get();
-        const costs = doc.data() || {};
-        const container = document.getElementById('shipping-list-container');
-        if (!container) return;
-
-        container.innerHTML = governorates.map(gov => `
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <label style="font-weight: bold;">${gov}</label>
-                <input type="number" 
-                       value="${costs[gov] || 0}" 
-                       class="shipping-input"
-                       data-gov="${gov}"
-                       style="width: 100px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; border-radius: 5px;"
-                       placeholder="0">
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error("Error loading shipping costs:", e);
-    }
-}
-
-window.saveShippingCosts = async function () {
-    const inputs = document.querySelectorAll('.shipping-input');
-    const newCosts = {};
-    let count = 0;
-
-    inputs.forEach(input => {
-        const gov = input.getAttribute('data-gov');
-        const price = Number(input.value) || 0;
-        if (gov) {
-            newCosts[gov] = price;
-            count++;
-        }
-    });
-
-    try {
-        await db.collection('settings').doc('shipping').set(newCosts);
-        console.log(`Saved ${count} shipping rules`);
-        alert('تم حفظ تكاليف الشحن بنجاح! ✅');
-    } catch (e) {
-        console.error("Error saving shipping costs:", e);
-        alert('حدث خطأ أثناء الحفظ ❌');
-    }
-};
+// --- REWRITTEN SHIPPING LOGIC REMOVED ---
+// All shipping related functions (loadShippingCosts, saveShippingCosts) have been removed.
 
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -350,7 +292,6 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
 
     if (pass === "diesel_prod") adminRole = 'products';
     else if (pass === "diesel_order") adminRole = 'orders';
-    else if (pass === "diesel_ship") adminRole = 'shipping';
     else if (pass === "ديزل_كل_حاجة") adminRole = 'all';
     else { alert("كلمة مرور غير صحيحة!"); return; }
 

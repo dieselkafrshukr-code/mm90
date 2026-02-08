@@ -24,7 +24,7 @@ let selectedProductForSize = null;
 let selectedColor = null;
 let activeCategory = "all";
 let remoteProducts = []; // To store products from Firebase
-let shippingCosts = {};
+
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
 ];
@@ -170,62 +170,25 @@ function initElements() {
     navLinks = document.querySelector('.nav-links');
     themeToggle = document.getElementById('theme-toggle');
     subFiltersContainer = document.getElementById('sub-filters-container');
-    loadShippingData();
+    subFiltersContainer = document.getElementById('sub-filters-container');
+    populateGovernorates();
 }
 
-async function loadShippingData() {
-    console.log("🚚 [Shipping] Starting loadShippingData...");
 
-    // 1. Populate Dropdown
+window.populateGovernorates = function () {
+    // Populate Dropdown for address selection
     const govSelect = document.getElementById('customer-gov');
     if (govSelect) {
         govSelect.innerHTML = '<option value="" disabled selected>اختر المحافظة...</option>' +
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
-        console.log("✅ [Shipping] Governorates dropdown populated.");
-    } else {
-        console.warn("⚠️ [Shipping] Dropdown #customer-gov not found!");
-    }
-
-    // 2. Load Remote Data
-    if (!db) {
-        console.error("❌ [Shipping] DB object is missing! Cannot load costs.");
-        return;
-    }
-
-    try {
-        console.log("🚚 [Shipping] Fetching from Firestore...");
-        const doc = await db.collection('settings').doc('shipping').get();
-
-        if (doc.exists) {
-            const data = doc.data();
-            // Check both possiblities
-            shippingCosts = data.costs || data || {};
-            console.log("🔥 [Shipping] FINAL DATA LOADED:", shippingCosts);
-        } else {
-            console.warn("⚠️ [Shipping] No shipping document found in Firestore!");
-            // Default fallback if needed, or leave empty
-            shippingCosts = {};
-        }
-    } catch (e) {
-        console.error("❌ [Shipping] Error loading data:", e);
     }
 }
 
 window.updateCheckoutTotal = () => {
-    const gov = document.getElementById('customer-gov').value;
-    const cost = shippingCosts[gov] || 0;
-
-    console.log(`💰 Calculating total for: ${gov}, Cost Found=${cost}`, shippingCosts);
-
     const itemsTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-
-    const shippingEl = document.getElementById('shipping-cost');
     const totalEl = document.getElementById('form-total-price');
 
-    if (shippingEl) shippingEl.innerText = `${cost} جنيه`;
-    else console.warn("⚠️ Element #shipping-cost not found!");
-
-    if (totalEl) totalEl.innerText = `${itemsTotal + cost} جنيه`;
+    if (totalEl) totalEl.innerText = `${itemsTotal} جنيه`;
 };
 
 const parentSubMap = {
@@ -300,7 +263,6 @@ function setupEventListeners() {
             submitBtn.innerText = "جاري الحفظ...";
 
             const gov = document.getElementById('customer-gov').value;
-            const shippingCost = shippingCosts[gov] || 0;
             const itemsTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
 
             const orderData = {
@@ -309,7 +271,7 @@ function setupEventListeners() {
                 gov: gov,
                 address: document.getElementById('customer-address').value,
                 items: cart,
-                total: itemsTotal + shippingCost,
+                total: itemsTotal,
                 status: "جديد",
                 paymentStatus: 'كاش/عند الاستلام',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
