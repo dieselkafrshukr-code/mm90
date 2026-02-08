@@ -413,9 +413,12 @@
     </div>
 
 
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Firebase SDKs - Load FIRST without defer -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
+    <!-- App Scripts - Load AFTER Firebase -->
     <script defer src="./js/products.js"></script>
     <script defer src="./js/main.js"></script>
 </body>
