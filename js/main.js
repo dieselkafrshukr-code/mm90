@@ -185,9 +185,11 @@ async function loadShippingData() {
             const doc = await db.collection('settings').doc('shipping').get();
             if (doc.exists) {
                 const data = doc.data();
-                // The 'costs' field holds the map: { "Cairo": 50, ... }
-                shippingCosts = data.costs || {};
-                console.log("✅ Shipping Costs Loaded:", shippingCosts);
+                // Check both possibilities: nested 'costs' or direct map
+                shippingCosts = data.costs || data || {};
+                console.log("🔥 Final Shipping Data Used:", shippingCosts);
+            } else {
+                console.warn("⚠️ No shipping document found in Firestore!");
             }
         } catch (e) { console.error("Error loading shipping costs", e); }
     }
