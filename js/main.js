@@ -55,7 +55,7 @@ try {
                 const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
                 localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
                 updateAuthUI();
-                loadCartFromFirebase();
+                // loadCartFromFirebase(); // Removed to prevent errors
             } else {
                 localStorage.removeItem('diesel_user_cache');
                 updateAuthUI();
@@ -65,6 +65,22 @@ try {
 } catch (error) {
     console.warn("Firebase failed to initialize:", error);
 }
+
+// Fixed Login Logic
+window.signInWithGoogle = async function () {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        await firebase.auth().signInWithPopup(provider);
+    } catch (e) {
+        console.error("Google Login Error:", e);
+        alert("فشل تسجيل الدخول - تأكد من اتصالك بالإنترنت");
+    }
+};
+
+window.signOutUser = async function () {
+    await firebase.auth().signOut();
+    location.reload();
+};
 
 // Separate rendering from logic for reuse
 function renderAuthUI(name) {
