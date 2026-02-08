@@ -86,22 +86,62 @@ function applyRoleRestrictions() {
 async function loadProducts() {
     if (!db) return;
     const snapshot = await productsCol.get();
-    const productsList = document.getElementById('products-list');
-    if (!productsList) return;
+    const productsListBody = document.getElementById('products-list-body');
+    if (!productsListBody) return;
 
-    productsList.innerHTML = snapshot.docs.map(doc => {
-        const p = doc.data();
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Update Stats
+    document.getElementById('stat-total').innerText = products.length;
+    document.getElementById('stat-clothes').innerText = products.filter(p => p.category === 'clothes').length;
+    document.getElementById('stat-shoes').innerText = products.filter(p => p.category === 'shoes').length;
+
+    productsListBody.innerHTML = products.map(p => {
+        const isActive = p.active !== false; // Default to true if not defined
         return `
-            <div class="product-item">
-                <img src="${p.image}" style="width:50px; height:50px; object-fit:cover;">
-                <div>
-                    <strong>${p.name}</strong><br>
-                    <span>${p.price} جنيه</span>
-                </div>
-            </div>
+            <tr>
+                <td><img src="${p.image}" class="product-thumb"></td>
+                <td><strong>${p.name}</strong></td>
+                <td>${p.price} جنيه</td>
+                <td>${p.category === 'clothes' ? 'ملابس' : p.category === 'shoes' ? 'أحذية' : 'بناطيل'}</td>
+                <td>
+                    <div class="actions">
+                        <i class="fas ${isActive ? 'fa-eye' : 'fa-eye-slash'}" 
+                           style="color: ${isActive ? '#4CAF50' : '#888'}; cursor: pointer;" 
+                           onclick="toggleProductStatus('${p.id}', ${isActive})" 
+                           title="${isActive ? 'إخفاء من الموقع' : 'إظهار في الموقع'}"></i>
+                        <i class="fas fa-edit btn-edit" onclick="editProduct('${p.id}')"></i>
+                        <i class="fas fa-trash-alt btn-delete" onclick="deleteProduct('${p.id}')"></i>
+                    </div>
+                </td>
+            </tr>
         `;
-    }).join('') || '<p>لا توجد منتجات</p>';
+    }).join('') || '<tr><td colspan="5" style="text-align:center; padding:30px; opacity:0.5;">لا توجد منتجات حالياً</td></tr>';
 }
+
+window.toggleProductStatus = async function (id, currentStatus) {
+    if (!id) return;
+    try {
+        await productsCol.doc(id).update({
+            active: !currentStatus
+        });
+        console.log(`✅ تم تحديث حالة المنتج ${id} إلى ${!currentStatus}`);
+        loadProducts(); // Refresh list
+    } catch (e) {
+        console.error("❌ Error toggling product status:", e);
+        alert("فشل تحديث حالة المنتج");
+    }
+};
+
+window.deleteProduct = async function (id) {
+    if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
+    try {
+        await productsCol.doc(id).delete();
+        loadProducts();
+    } catch (e) {
+        alert("حدث خطأ أثناء الحذف");
+    }
+};
 
 async function loadOrders() {
     if (!db) return;

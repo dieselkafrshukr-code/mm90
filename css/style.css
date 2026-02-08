@@ -556,59 +556,55 @@ img {
     }
 }
 
-/* UI Global Components (Google Login style - EXACT MATCH) */
+/* UI Global Components (Google Login style - 1:1 REPLICA) */
 .btn-google-login {
     display: flex !important;
-    flex-direction: row !important;
-    /* In RTL, first child is on the right */
     align-items: center !important;
-    justify-content: space-between !important;
-    padding: 12px 12px 12px 30px !important;
-    /* More padding on the left for the text */
+    justify-content: flex-start !important;
     background: #e20613 !important;
     border: none !important;
     border-radius: 100px !important;
     color: #fff !important;
     font-weight: 800 !important;
-    font-size: 1.2rem !important;
+    font-size: 1.25rem !important;
     cursor: pointer !important;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     width: 100% !important;
-    max-width: 320px !important;
+    max-width: 350px !important;
     margin: 0 auto !important;
-    box-shadow: 0 10px 25px rgba(226, 6, 19, 0.35) !important;
+    box-shadow: 0 10px 25px rgba(226, 6, 19, 0.4) !important;
     font-family: 'Cairo', sans-serif !important;
     text-decoration: none !important;
+    padding: 6px !important;
+    overflow: hidden;
 }
 
 .btn-google-login:hover {
-    transform: scale(1.03);
-    box-shadow: 0 15px 30px rgba(226, 6, 19, 0.45);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(226, 6, 19, 0.5);
 }
 
 .btn-google-login .google-icon-wrapper {
-    background: #fff;
-    border-radius: 50%;
-    width: 42px;
-    height: 42px;
+    background: transparent;
+    width: 50px;
+    height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    order: 1;
-    /* Ensures it stays on the right in RTL */
 }
 
 .btn-google-login span {
-    order: 2;
-    /* Text goes to the left of the icon */
     flex: 1;
     text-align: center;
+    padding-left: 10px;
+    padding-right: 0;
 }
 
-.btn-google-login .google-icon-wrapper img {
-    width: 22px;
-    height: 22px;
+.btn-google-login img {
+    width: 26px;
+    height: 26px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 /* Collections Grid */

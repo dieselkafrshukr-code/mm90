@@ -78,6 +78,10 @@ try {
 window.signInWithGoogle = async function () {
     console.log("🔐 محاولة تسجيل الدخول بجوجل...");
     const provider = new firebase.auth.GoogleAuthProvider();
+    // Force account selection every time
+    provider.setCustomParameters({
+        prompt: 'select_account'
+    });
     try {
         await firebase.auth().signInWithPopup(provider);
         console.log("✅ تم تسجيل الدخول بنجاح!");
@@ -391,7 +395,8 @@ window.applySubFilter = (parent, subId, btn) => {
 
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
-    let filtered = remoteProducts;
+    // Hide products that are explicitly set to inactive
+    let filtered = remoteProducts.filter(p => p.active !== false);
 
     if (parent !== 'all') {
         filtered = filtered.filter(p => p.parentCategory === parent);
