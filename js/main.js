@@ -191,6 +191,9 @@ async function loadShippingData() {
 window.updateCheckoutTotal = () => {
     const gov = document.getElementById('customer-gov').value;
     const cost = shippingCosts[gov] || 0;
+
+    console.log(`💰 Calculating total for: ${gov}, Cost Found=${cost}`, shippingCosts);
+
     const itemsTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
 
     const shippingEl = document.getElementById('shipping-cost');
