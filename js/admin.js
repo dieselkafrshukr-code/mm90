@@ -15,7 +15,13 @@ let isFirebaseReady = false;
 let adminRole = localStorage.getItem('adminRole') || 'none';
 
 const governorates = [
-    "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
+    "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية",
+    "البحر الأحمر", "البحيرة", "الفيوم", "الغربية",
+    "الإسماعيلية", "المنوفية", "المنيا", "القليوبية",
+    "الوادي الجديد", "السويس", "الشرقية", "دمياط",
+    "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح",
+    "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف",
+    "أسيوط", "أسوان"
 ];
 
 // Initialize Firebase
@@ -67,6 +73,10 @@ function showTab(tab) {
     document.getElementById('shipping-section').style.display = 'none';
     const section = document.getElementById(`${tab}-section`);
     if (section) section.style.display = 'block';
+
+    if (tab === 'products') loadProducts();
+    else if (tab === 'orders') loadOrders();
+    else if (tab === 'shipping') loadShippingCosts();
 }
 
 function applyRoleRestrictions() {
@@ -287,9 +297,51 @@ async function loadOrders() {
 
 async function loadShippingCosts() {
     if (!db) return;
-    const doc = await db.collection('settings').doc('shipping').get();
-    const costs = doc.data() || {};
+    try {
+        const doc = await db.collection('settings').doc('shipping').get();
+        const costs = doc.data() || {};
+        const container = document.getElementById('shipping-list-container');
+        if (!container) return;
+
+        container.innerHTML = governorates.map(gov => `
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-weight: bold;">${gov}</label>
+                <input type="number" 
+                       value="${costs[gov] || 0}" 
+                       class="shipping-input"
+                       data-gov="${gov}"
+                       style="width: 100px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; text-align: center; border-radius: 5px;"
+                       placeholder="0">
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error("Error loading shipping costs:", e);
+    }
 }
+
+window.saveShippingCosts = async function () {
+    const inputs = document.querySelectorAll('.shipping-input');
+    const newCosts = {};
+    let count = 0;
+
+    inputs.forEach(input => {
+        const gov = input.getAttribute('data-gov');
+        const price = Number(input.value) || 0;
+        if (gov) {
+            newCosts[gov] = price;
+            count++;
+        }
+    });
+
+    try {
+        await db.collection('settings').doc('shipping').set(newCosts);
+        console.log(`Saved ${count} shipping rules`);
+        alert('تم حفظ تكاليف الشحن بنجاح! ✅');
+    } catch (e) {
+        console.error("Error saving shipping costs:", e);
+        alert('حدث خطأ أثناء الحفظ ❌');
+    }
+};
 
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
