@@ -373,50 +373,47 @@
 
     <!-- My Orders Modal -->
     <div id="my-orders-modal" class="modal">
-        <div class="modal-box" style="max-width: 600px; width: 95%; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-box" style="max-width: 480px; width: 92%; padding: 25px;">
             <button id="close-orders-modal" class="close-modal"><i class="fas fa-times"></i></button>
 
             <!-- Login Section (shown when not logged in) -->
-            <div id="orders-login-section"
-                style="width: 100%; display: none; text-align: center; padding: clamp(20px, 5vw, 40px);">
+            <div id="orders-login-section" style="width: 100%; display: none; text-align: center; padding: 10px 0;">
                 <i class="fas fa-box-open"
-                    style="font-size: clamp(2.5rem, 8vw, 4rem); color: var(--primary); margin-bottom: clamp(15px, 4vw, 25px); display: block;"></i>
-                <h2
-                    style="margin-bottom: clamp(10px, 3vw, 15px); font-weight: 900; font-size: clamp(1.3rem, 5vw, 1.8rem);">
-                    تتبع طلباتك 📦
-                </h2>
-                <p
-                    style="margin-bottom: clamp(20px, 5vw, 30px); opacity: 0.7; font-size: clamp(0.9rem, 3.5vw, 1rem); max-width: 350px; margin-left: auto; margin-right: auto; line-height: 1.6; padding: 0 10px;">
-                    سجل دخول بحساب جوجل لمتابعة حالة طلباتك والاطلاع على تفاصيلها
+                    style="font-size: 2.8rem; color: var(--primary); margin-bottom: 15px; display: block;"></i>
+                <h2 style="margin-bottom: 10px; font-weight: 800; font-size: 1.4rem;">تتبع طلباتك</h2>
+                <p style="margin-bottom: 20px; opacity: 0.6; font-size: 0.9rem; line-height: 1.5;">
+                    سجل دخول لمتابعة طلباتك
                 </p>
                 <button id="google-login-btn"
-                    style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: clamp(12px, 3vw, 14px) clamp(20px, 5vw, 30px); background: linear-gradient(135deg, #e20613 0%, #ff2a38 100%); border: none; border-radius: 50px; color: #fff; font-weight: 700; font-size: clamp(0.9rem, 3.5vw, 1rem); cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(226, 6, 19, 0.3); width: auto; min-width: min(250px, 80vw); max-width: 100%;">
+                    style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 22px; background: var(--primary); border: none; border-radius: 8px; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                        style="width: clamp(18px, 5vw, 22px); height: clamp(18px, 5vw, 22px); flex-shrink: 0;">
-                    <span style="white-space: nowrap;">تسجيل الدخول بجوجل</span>
+                        style="width: 18px; height: 18px;">
+                    <span>دخول بجوجل</span>
                 </button>
             </div>
 
             <!-- Orders Section (shown when logged in) -->
             <div id="orders-list-section" style="display: none; width: 100%;">
                 <div
-                    style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: clamp(12px, 3vw, 15px); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div style="text-align: right; flex: 1; min-width: 150px;">
-                        <h2 style="margin: 0; font-size: clamp(1rem, 4vw, 1.2rem);">
-                            <i class="fas fa-box" style="color: var(--primary);"></i> طلباتي
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="flex: 1;">
+                        <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700;">
+                            <i class="fas fa-box" style="color: var(--primary); font-size: 0.95rem;"></i> طلباتي
                         </h2>
                         <p id="user-email-display"
-                            style="font-size: clamp(0.7rem, 2.5vw, 0.75rem); opacity: 0.6; margin: 5px 0 0; word-break: break-all;">
+                            style="font-size: 0.7rem; opacity: 0.5; margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         </p>
                     </div>
                     <button id="logout-btn"
-                        style="background: #e20613; border: none; color: #fff; padding: clamp(8px, 2vw, 10px) clamp(14px, 3vw, 18px); border-radius: 10px; cursor: pointer; font-size: clamp(0.75rem, 3vw, 0.85rem); font-weight: 700; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; white-space: nowrap;">
-                        <i class="fas fa-sign-out-alt"></i> <span>تسجيل الخروج</span>
+                        style="background: rgba(226, 6, 19, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 5px; transition: all 0.2s;">
+                        <i class="fas fa-sign-out-alt" style="font-size: 0.7rem;"></i>
+                        <span>خروج</span>
                     </button>
                 </div>
 
-                <div id="my-orders-list" style="padding: 0 5px;">
-                    <div style="text-align: center; padding: 30px; opacity: 0.5;">جاري تحميل الطلبات...</div>
+                <div id="my-orders-list" style="max-height: 400px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 30px; opacity: 0.4; font-size: 0.85rem;">جاري التحميل...
+                    </div>
                 </div>
             </div>
         </div>
