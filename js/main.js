@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-// 🚀 DIESEL SHOP - INVINCIBLE ENGINE
+// 🚀 DIESEL SHOP - INVINCIBLE ENGINE (Supabase Edition)
 // --- IMMEDIATE UI FIX: FORCE REMOVE LOADER AFTER 2 SECONDS ---
 const forceHideLoader = () => {
     const loaderEl = document.getElementById('loader');
@@ -13,10 +12,6 @@ const forceHideLoader = () => {
 };
 setTimeout(forceHideLoader, 2000);
 
-=======
-
-// 🚀 DIESEL SHOP - INVINCIBLE ENGINE (Supabase Edition)
->>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
 let cart = [];
 try {
     const saved = localStorage.getItem('diesel_cart');
@@ -28,7 +23,7 @@ try {
 let selectedProductForSize = null;
 let selectedColor = null;
 let activeCategory = "all";
-let remoteProducts = []; 
+let remoteProducts = []; // To store products from Supabase
 let shippingCosts = {};
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
@@ -37,74 +32,40 @@ const governorates = [
 // Supabase Config
 const SUPABASE_URL = 'https://ymdnfohikgjkvdmdrthe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0JuDItWsSggSZPj0ATwYA_xXlGI92x';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db_client = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
+// Initialize Auth
 let currentUser = null;
-<<<<<<< HEAD
-let db = null;
 
-try {
-    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-
-        // Force Local Persistence for session stability
-        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-        // Initial UI check from LocalStorage (for instant feedback before Firebase fires)
-        const cachedUser = localStorage.getItem('diesel_user_cache');
-        if (cachedUser) {
-            try {
-                const data = JSON.parse(cachedUser);
-                renderAuthUI(data.name);
-            } catch (e) { }
-        }
-
-        // Auth State Listener for Customers
-        firebase.auth().onAuthStateChanged(user => {
-            currentUser = user;
-            if (user) {
-                const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
-                localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
-                updateAuthUI();
-                loadCartFromFirebase();
-            } else {
-                localStorage.removeItem('diesel_user_cache');
-                updateAuthUI();
-            }
-        });
+if (db_client) {
+    // Initial UI check from LocalStorage (for instant feedback)
+    const cachedUser = localStorage.getItem('diesel_user_cache');
+    if (cachedUser) {
+        try {
+            const data = JSON.parse(cachedUser);
+            renderAuthUI(data.name);
+        } catch (e) { }
     }
-} catch (error) {
-    console.warn("Firebase failed to initialize:", error);
-=======
 
-// Initialize & Auth Listener
-async function initSupabaseAuth() {
-    // Check current session
-    const { data: { session } } = await supabase.auth.getSession();
-    handleAuthChange(session);
-
-    // Listen for changes
-    supabase.auth.onAuthStateChange((_event, session) => {
-        handleAuthChange(session);
-    });
->>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
-}
-
-function handleAuthChange(session) {
-    if (session?.user) {
-        currentUser = session.user;
-        const name = currentUser.user_metadata.full_name ? currentUser.user_metadata.full_name.split(' ')[0] : 'حسابي';
-        localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
-        updateAuthUI();
-        loadCartFromSupabase();
-    } else {
-        currentUser = null;
-        if (localStorage.getItem('diesel_user_cache')) {
+    // Auth State Listener
+    db_client.auth.onAuthStateChange((event, session) => {
+        currentUser = session?.user || null;
+        if (currentUser) {
+            const name = currentUser.user_metadata?.full_name?.split(' ')[0] || 'حسابي';
+            localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
+            updateAuthUI();
+            loadCartFromDB();
+        } else {
             localStorage.removeItem('diesel_user_cache');
+            updateAuthUI();
         }
+    });
+
+    // Check initial session
+    db_client.auth.getSession().then(({ data: { session } }) => {
+        currentUser = session?.user || null;
         updateAuthUI();
-    }
+    });
 }
 
 // Separate rendering from logic for reuse
@@ -145,7 +106,6 @@ const initAll = () => {
     if (window.initialized) return;
     window.initialized = true;
 
-<<<<<<< HEAD
     try {
         initElements();
         initTheme();
@@ -155,22 +115,7 @@ const initAll = () => {
     } catch (error) {
         console.error("Initialization error:", error);
     } finally {
-        // Always try to hide the loader after a short delay
         setTimeout(hideLoader, 1500);
-=======
-    initElements();
-    initTheme();
-    setupEventListeners();
-    updateCartUI();
-    renderAll();
-    initSupabaseAuth(); // Start Auth
-
-    if (loader) {
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 800);
-        }, 2200);
->>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
     }
 };
 
@@ -179,7 +124,7 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     initAll();
 }
 
-// Emergency Fallback: If initAll never runs or hangs, hide loader anyway after 5s
+// Emergency Fallback
 setTimeout(hideLoader, 5000);
 
 function initElements() {
@@ -208,19 +153,12 @@ async function loadShippingData() {
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
     }
 
-<<<<<<< HEAD
-    if (typeof db !== 'undefined' && db) {
+    if (db_client) {
         try {
-            const doc = await db.collection('settings').doc('shipping').get();
-            if (doc.exists) shippingCosts = doc.data().costs || {};
+            const { data } = await db_client.from('settings').select('costs').eq('id', 'shipping').single();
+            if (data) shippingCosts = data.costs || {};
         } catch (e) { console.error("Error loading shipping costs", e); }
     }
-=======
-    try {
-        const { data, error } = await supabase.from('settings').select('costs').eq('id', 'shipping').single();
-        if (data) shippingCosts = data.costs || {};
-    } catch (e) { console.error("Error loading shipping costs", e); }
->>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
 }
 
 window.updateCheckoutTotal = () => {
@@ -254,21 +192,15 @@ const parentSubMap = {
 };
 
 function setupEventListeners() {
-    // Navbar Scroll Effect
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
+        if (window.scrollY > 50) navbar?.classList.add('scrolled');
+        else navbar?.classList.remove('scrolled');
     });
 
-    // Nav links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.onclick = () => closeMobileMenu();
     });
 
-    // Main Filters
     document.querySelectorAll('.main-filter-btn').forEach(btn => {
         btn.onclick = () => {
             const parent = btn.dataset.parent;
@@ -293,10 +225,8 @@ function setupEventListeners() {
     }
 
     if (themeToggle) themeToggle.onclick = (e) => { e.preventDefault(); toggleTheme(); };
-
     if (closeModal) closeModal.onclick = () => sizeModal.classList.remove('active');
 
-    // Checkout Button - MUST OPEN MODAL
     const checkoutBtn = document.querySelector('.checkout-btn');
     if (checkoutBtn) {
         checkoutBtn.onclick = () => {
@@ -310,15 +240,11 @@ function setupEventListeners() {
     const closeCheckout = document.getElementById('close-checkout');
     if (closeCheckout) closeCheckout.onclick = () => document.getElementById('checkout-modal').classList.remove('active');
 
-    if (closeModal) closeModal.onclick = () => sizeModal.classList.remove('active');
-
-    // Checkout Form - Cash on Delivery Only
     const orderForm = document.getElementById('order-form');
     if (orderForm) {
         orderForm.onsubmit = async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('order-submit-btn');
-
             submitBtn.disabled = true;
             submitBtn.innerText = "جاري الحفظ...";
 
@@ -334,52 +260,27 @@ function setupEventListeners() {
             }
 
             const orderData = {
-                customerName: document.getElementById('customer-name').value,
+                customer_name: document.getElementById('customer-name').value,
                 phone: document.getElementById('customer-phone').value,
                 gov: gov,
                 address: document.getElementById('customer-address').value,
-                items: cart.map(i => ({
-                    id: i.id,
-                    name: i.name,
-                    size: i.size,
-                    color: i.color,
-                    quantity: i.quantity,
-                    price: i.price,
-                    total: i.price * i.quantity,
-                    image: i.image
-                })),
-                itemsTotal: itemsTotal,
-                shippingCost: shippingCost,
+                items: cart,
+                items_total: itemsTotal,
+                shipping_cost: shippingCost,
                 total: itemsTotal + shippingCost,
                 status: "جديد",
-                paymentMethod: 'عند الاستلام',
-                paymentStatus: "لم يتم الدفع",
-                userId: currentUser ? currentUser.id : null,
-                userEmail: currentUser ? currentUser.email : null
+                payment_method: 'عند الاستلام',
+                user_id: currentUser ? currentUser.id : null,
+                user_email: currentUser ? currentUser.email : null
             };
 
             try {
-<<<<<<< HEAD
-                // Save order to Firestore
-                await db.collection('orders').add(orderData);
-
-                // Clear cart and show success
-=======
-                // Save order to Supabase
-                const { data, error } = await supabase.from('orders').insert([orderData]).select();
-                
+                const { error } = await db_client.from('orders').insert(orderData);
                 if (error) throw error;
 
-                if (paymentMethod === 'online') {
-                    alert("الدفع الأونلاين غير مفعل حالياً مع قاعدة البيانات الجديدة");
-                    return;
-                }
-
-                // COD Flow
->>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
                 cart = [];
                 updateCartUI();
-                saveCartToSupabase();
+                saveCartToDB();
                 document.getElementById('checkout-modal').classList.remove('active');
                 document.getElementById('success-modal').classList.add('active');
                 orderForm.reset();
@@ -393,7 +294,6 @@ function setupEventListeners() {
         };
     }
 
-    // Google Login & Logout Buttons
     const gLogin = document.getElementById('google-login-btn');
     if (gLogin) gLogin.onclick = signInWithGoogle;
 
@@ -407,39 +307,23 @@ function setupEventListeners() {
     if (closeOrders) closeOrders.onclick = () => document.getElementById('my-orders-modal').classList.remove('active');
 }
 
-// --- Product Logic ---
 function renderAll() {
     if (!menContainer) return;
     menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff;">جاري تحميل المنتجات...</div>';
 
-    let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
-
-    supabase.from('products').select('*').then(({ data, error }) => {
-        let fireProds = [];
-        if (!error && data) {
-            fireProds = data;
-        }
-        combineAndRender(fireProds, localProds);
-    }).catch(() => combineAndRender([], localProds));
+    if (db_client) {
+        db_client.from('products').select('*').eq('status', 'active').then(({ data, error }) => {
+            if (error) renderFallback();
+            else {
+                remoteProducts = data;
+                filterAndRender('men', activeCategory, 'all');
+            }
+        });
+    } else renderFallback();
 }
 
-function combineAndRender(fireProds, localProds) {
-    remoteProducts = [...fireProds, ...localProds];
-    // Fallback if empty and products variable exists (local js file)
-    if (remoteProducts.length === 0 && typeof products !== 'undefined') remoteProducts = products;
-
-    // Unique by name/id
-    const seen = new Set();
-    remoteProducts = remoteProducts.filter(p => {
-        const id = p.id || p.name;
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-    });
-
-    // Manual Sort
-    remoteProducts.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-
+function renderFallback() {
+    remoteProducts = typeof products !== 'undefined' ? products : [];
     filterAndRender('men', activeCategory, 'all');
 }
 
@@ -452,7 +336,7 @@ function renderSubFilters(parent) {
         return;
     }
 
-    subFiltersContainer.innerHTML = '<button class="sub-btn active" onclick="applySubFilter(\'' + parent + '\', \'all\', this)">الكل</button>' +
+    subFiltersContainer.innerHTML = `<button class="sub-btn active" onclick="applySubFilter('${parent}', 'all', this)">الكل</button>` +
         subs.map(s => `<button class="sub-btn" onclick="applySubFilter('${parent}', '${s.id}', this)">${s.label}</button>`).join('');
 
     subFiltersContainer.style.display = 'flex';
@@ -467,24 +351,21 @@ window.applySubFilter = (parent, subId, btn) => {
 
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
-    // Hide products with status: 'hidden'
     let filtered = remoteProducts.filter(p => p.status !== 'hidden');
 
     if (parent !== 'all') {
         if (parent === 'clothes') {
             const clothesSubs = parentSubMap.clothes.map(s => s.id);
-            filtered = filtered.filter(p => clothesSubs.includes(p.subCategory) || p.subCategory === 'clothes' || p.parentCategory === 'clothes');
+            filtered = filtered.filter(p => clothesSubs.includes(p.sub_category) || p.parent_category === 'clothes');
         } else if (parent === 'pants') {
             const pantsSubs = parentSubMap.pants.map(s => s.id);
-            filtered = filtered.filter(p => pantsSubs.includes(p.subCategory) || p.subCategory === 'pants' || p.parentCategory === 'pants');
+            filtered = filtered.filter(p => pantsSubs.includes(p.sub_category) || p.parent_category === 'pants');
         } else {
-            filtered = filtered.filter(p => p.subCategory === parent || p.parentCategory === parent);
+            filtered = filtered.filter(p => p.parent_category === parent || p.sub_category === parent);
         }
     }
 
-    if (sub !== 'all') {
-        filtered = filtered.filter(p => p.subCategory === sub);
-    }
+    if (sub !== 'all') filtered = filtered.filter(p => p.sub_category === sub);
 
     if (filtered.length === 0) {
         menContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; opacity:0.5;">لا توجد نتائج مطابقة</div>`;
@@ -509,43 +390,34 @@ function filterAndRender(section, parent, sub) {
     `).join('');
 }
 
-// --- Cart Logic ---
 window.openSizeModal = (id) => {
-    const p = remoteProducts.find(prod => prod.id === id);
+    const p = remoteProducts.find(prod => prod.id == id);
     if (!p) return;
     selectedProductForSize = p;
-    selectedColor = (p.colorVariants && p.colorVariants.length > 0) ? p.colorVariants[0].name : "أساسي";
+    selectedColor = (p.color_variants && p.color_variants.length > 0) ? p.color_variants[0].name : "أساسي";
 
     modalProductName.innerText = p.name;
     modalProductPrice.innerText = `${p.price} جنيه`;
     document.getElementById('modal-img').src = p.image;
 
-    // Colors
     const colorContainer = document.getElementById('modal-color-options');
-    const colors = (p.colorVariants && p.colorVariants.length > 0) ? p.colorVariants.map(v => v.name) : ["أساسي"];
+    const colors = (p.color_variants && p.color_variants.length > 0) ? p.color_variants.map(v => v.name) : ["أساسي"];
     colorContainer.innerHTML = colors.map((c, i) => `<button class="color-btn ${i === 0 ? 'selected' : ''}" onclick="modalSelectColor('${c}', this)">${c}</button>`).join('');
 
-    // Update selected color state
-    selectedColor = colors[0];
+    if (p.color_variants && p.color_variants[0]?.image) document.getElementById('modal-img').src = p.color_variants[0].image;
 
-    // Initial Image for Color
-    if (p.colorVariants && p.colorVariants[0] && p.colorVariants[0].image) document.getElementById('modal-img').src = p.colorVariants[0].image;
-
-    // Sizes
     renderModalSizes(p, selectedColor);
     sizeModal.classList.add('active');
 };
 
-// Global handlers for buttons generated via innerHTML
 window.modalSelectColor = (color, btn) => {
     selectedColor = color;
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     const p = selectedProductForSize;
-    if (p.colorVariants) {
-        const v = p.colorVariants.find(x => x.name === color);
-        if (v && v.image) document.getElementById('modal-img').src = v.image;
-        else document.getElementById('modal-img').src = p.image;
+    if (p.color_variants) {
+        const v = p.color_variants.find(x => x.name === color);
+        document.getElementById('modal-img').src = v?.image || p.image;
         renderModalSizes(p, color);
     }
 };
@@ -553,15 +425,11 @@ window.modalSelectColor = (color, btn) => {
 function renderModalSizes(p, color) {
     const container = document.querySelector('.size-options');
     const sizeLabel = document.querySelector('.size-label:last-of-type');
-
     let sizes = p.sizes || [];
-    if (p.colorVariants && p.colorVariants.length > 0) {
-        const v = p.colorVariants.find(x => x.name === color);
-        if (v && v.sizes && v.sizes.length > 0) {
-            sizes = v.sizes;
-        } else if (v) {
-            sizes = []; // This specific color has no sizes
-        }
+
+    if (p.color_variants) {
+        const v = p.color_variants.find(x => x.name === color);
+        if (v?.sizes) sizes = v.sizes;
     }
 
     if (sizes.length > 0) {
@@ -569,7 +437,7 @@ function renderModalSizes(p, color) {
         container.innerHTML = sizes.map(s => `<button class="size-btn" onclick="addToCartFromModal('${s}')">${s}</button>`).join('');
     } else {
         if (sizeLabel) sizeLabel.style.display = 'none';
-        container.innerHTML = '<p style="color:var(--primary); font-weight:bold; width:100%; margin:10px 0;">عفواً، هذا اللون غير متوفر حالياً</p>';
+        container.innerHTML = '<p style="color:var(--primary); font-weight:bold; width:100%; margin:10px 0;">غير متوفر حالياً</p>';
     }
 }
 
@@ -579,9 +447,9 @@ window.addToCartFromModal = (size) => {
     const cartId = `${p.id}-${size}-${color}`;
 
     let img = p.image;
-    if (p.colorVariants) {
-        const v = p.colorVariants.find(x => x.name === color);
-        if (v && v.image) img = v.image;
+    if (p.color_variants) {
+        const v = p.color_variants.find(x => x.name === color);
+        if (v?.image) img = v.image;
     }
 
     const existing = cart.find(i => i.cartId === cartId);
@@ -589,7 +457,7 @@ window.addToCartFromModal = (size) => {
     else cart.push({ ...p, cartId, size, color, quantity: 1, image: img });
 
     updateCartUI();
-    saveCartToSupabase();
+    saveCartToDB();
     sizeModal.classList.remove('active');
     openCartSidebar();
 };
@@ -601,68 +469,46 @@ function updateCartUI() {
     if (!list) return;
 
     if (cart.length === 0) {
-        list.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; opacity:0.5; gap:20px;">' +
-            '<i class="fas fa-shopping-bag" style="font-size:3rem;"></i>' +
-            '<p>السلة فارغة حالياً</p>' +
-            '</div>';
+        list.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; opacity:0.5; gap:20px;"><i class="fas fa-shopping-bag" style="font-size:3rem;"></i><p>السلة فارغة</p></div>';
         totalEl.innerText = '0 جنيه';
     } else {
         list.innerHTML = cart.map(i => `
             <div class="cart-item">
                 <img src="${i.image}" alt="${i.name}">
-                
                 <div class="cart-item-info">
                     <h4>${i.name}</h4>
-                    <div class="cart-item-details">
-                        ${i.size || 'M'} | ${i.color || 'أساسي'}
-                    </div>
-                    
+                    <div class="cart-item-details">${i.size} | ${i.color}</div>
                     <div class="qty-control">
                         <button class="qty-btn-inc" onclick="updateCartQuantity('${i.cartId}', 1)">+</button>
                         <span>${i.quantity}</span>
                         <button class="qty-btn-dec" onclick="updateCartQuantity('${i.cartId}', -1)">−</button>
                     </div>
                 </div>
-
-                <div class="delete-btn" onclick="removeFromCart('${i.cartId}')">
-                    <i class="fas fa-trash-alt"></i>
-                </div>
+                <div class="delete-btn" onclick="removeFromCart('${i.cartId}')"><i class="fas fa-trash-alt"></i></div>
             </div>
         `).join('');
         totalEl.innerText = `${cart.reduce((s, i) => s + (i.price * i.quantity), 0)} جنيه`;
-    }
-    // Sync checkout total if modal is open (or update it anyway)
-    if (document.getElementById('checkout-modal').classList.contains('active')) {
-        updateCheckoutTotal();
     }
 }
 
 window.updateCartQuantity = (id, d) => {
     const i = cart.find(x => x.cartId === id);
-    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); saveCartToSupabase(); } }
+    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); saveCartToDB(); } }
 };
 
-window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); saveCartToSupabase(); };
-
+window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); saveCartToDB(); };
 function openCartSidebar() { cartSidebar.classList.add('open'); cartOverlay.classList.add('show'); }
 function closeCartSidebar() { cartSidebar.classList.remove('open'); cartOverlay.classList.remove('show'); }
-function closeMobileMenu() { if (mobileMenuBtn) { mobileMenuBtn.classList.remove('active'); navLinks.classList.remove('active'); } }
+function closeMobileMenu() { mobileMenuBtn?.classList.remove('active'); navLinks?.classList.remove('active'); }
 
-// --- Auth & Orders (Supabase) ---
 async function signInWithGoogle() {
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.href // Redirect back to here
-            }
-        });
-        if (error) throw error;
-    } catch (e) { console.error(e); alert("خطأ في الدخول"); }
+    if (!db_client) return;
+    try { await db_client.auth.signInWithOAuth({ provider: 'google' }); } catch (e) { alert("خطأ في الدخول"); }
 }
 
 async function signOutUser() {
-    await supabase.auth.signOut();
+    if (!db_client) return;
+    await db_client.auth.signOut();
     cart = [];
     localStorage.removeItem('diesel_cart');
     updateCartUI();
@@ -670,7 +516,7 @@ async function signOutUser() {
 }
 
 function updateAuthUI() {
-    const name = currentUser ? (currentUser.user_metadata.full_name ? currentUser.user_metadata.full_name.split(' ')[0] : 'حسابي') : null;
+    const name = currentUser ? (currentUser.user_metadata?.full_name?.split(' ')[0] || 'حسابي') : null;
     renderAuthUI(name);
 }
 
@@ -695,87 +541,37 @@ async function loadMyOrders() {
     const list = document.getElementById('my-orders-list');
     list.innerHTML = 'جاري التحميل...';
     try {
-        const { data: orders, error } = await supabase.from('orders')
-            .select('*')
-            .eq('userId', currentUser.id)
-            .order('createdAt', { ascending: false });
-
-        if (error) throw error;
-
-        // If no orders by ID, try by email (legacy/guest support)
-        let finalOrders = orders;
-        if (!finalOrders || finalOrders.length === 0) {
-            const { data: emailOrders } = await supabase.from('orders')
-                .select('*')
-                .eq('userEmail', currentUser.email)
-                .order('createdAt', { ascending: false });
-            finalOrders = emailOrders || [];
-        }
-
-        list.innerHTML = finalOrders.map(o => {
-            const statusClass = o.status === 'جديد' ? 'status-new' :
-                o.status === 'جاري التجهيز' ? 'status-preparing' :
-                    o.status === 'تم الشحن' ? 'status-shipped' :
-                        o.status === 'تم التسليم' ? 'status-delivered' : 'status-new';
-
-            const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '';
-
-            // Handle items being string (from existing code) or JSON
-            let items = o.items;
-            if (typeof items === 'string') {
-                try { items = JSON.parse(items); } catch(e) {}
-            }
-
-            return `
+        const { data } = await db_client.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+        list.innerHTML = data.map(o => `
             <div class="order-card-mini">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
-                    <span style="font-size:0.85rem; opacity:0.6; font-family:'Outfit', sans-serif;">${date}</span>
-                    <span class="order-status ${statusClass}">${o.status}</span>
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>${new Date(o.created_at).toLocaleDateString('ar-EG')}</span>
+                    <span class="order-status">${o.status}</span>
                 </div>
-                
-                <div class="order-items-list">
-                    ${items.map(i => `
-                        <div style="display:flex; align-items:center; gap:15px; margin-bottom:12px;">
-                            <img src="${i.image}" style="width:50px; height:60px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
-                            <div style="flex:1; text-align:right;">
-                                <div style="font-weight:700; font-size:0.95rem;">${i.name}</div>
-                                <div style="font-size:0.8rem; opacity:0.6;">${i.size} | ${i.color} | x${i.quantity}</div>
-                            </div>
-                            <div style="font-weight:900; color:var(--primary);">${i.price} ج.م</div>
-                        </div>
-                    `).join('')}
-                </div>
-
-                <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:700;">إجمالي الطلب:</span>
-                    <span style="font-weight:900; font-size:1.2rem; color:var(--primary); font-family:'Outfit', sans-serif;">${o.total} جنيه</span>
-                </div>
-            </div>`;
-        }).join('') || '<div style="text-align:center; padding:40px; opacity:0.5;">لا توجد طلبات سابقة</div>';
-    } catch (e) { console.error(e); list.innerHTML = 'خطأ في التحميل'; }
+                <div>${o.items.map(i => `<div style="font-size:0.9rem;">${i.name} x${i.quantity}</div>`).join('')}</div>
+                <div style="margin-top:10px; font-weight:bold;">الإجمالي: ${o.total} جنيه</div>
+            </div>
+        `).join('') || '<div style="text-align:center; padding:40px; opacity:0.5;">لا توجد طلبات</div>';
+    } catch (e) { list.innerHTML = 'خطأ في التحميل'; }
 }
 
-async function saveCartToSupabase() {
+async function saveCartToDB() {
     localStorage.setItem('diesel_cart', JSON.stringify(cart));
-    if (currentUser) {
-        // Upsert cart to Supabase
-        await supabase.from('user_carts').upsert({ userId: currentUser.id, items: cart, updatedAt: new Date() });
+    if (currentUser && db_client) {
+        await db_client.from('carts').upsert({ user_id: currentUser.id, items: cart });
     }
 }
 
-async function loadCartFromSupabase() {
-    if (!currentUser) return;
-    const { data } = await supabase.from('user_carts').select('items').eq('userId', currentUser.id).single();
-    if (data && data.items) {
-        const remote = data.items;
-        if (remote.length > 0) { cart = remote; updateCartUI(); }
-    }
+async function loadCartFromDB() {
+    if (!currentUser || !db_client) return;
+    const { data } = await db_client.from('carts').select('items').eq('user_id', currentUser.id).single();
+    if (data?.items?.length > 0) { cart = data.items; updateCartUI(); }
 }
 
 function initTheme() {
     const theme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-    const icon = document.getElementById('theme-toggle')?.querySelector('i');
+    const icon = themeToggle?.querySelector('i');
     if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
@@ -784,11 +580,8 @@ function toggleTheme() {
     const next = cur === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-    const icon = document.getElementById('theme-toggle')?.querySelector('i');
+    const icon = themeToggle?.querySelector('i');
     if (icon) icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-function closeSuccessModal() {
-    const modal = document.getElementById('success-modal');
-    if (modal) modal.classList.remove('active');
-}
+function closeSuccessModal() { document.getElementById('success-modal')?.classList.remove('active'); }
