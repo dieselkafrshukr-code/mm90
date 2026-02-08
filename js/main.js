@@ -1,4 +1,4 @@
-// 🚀 DIESEL SHOP - INVINCIBLE ENGINE (Supabase Edition)
+// 🚀 DIESEL SHOP - INVINCIBLE ENGINE (Firebase Version)
 // --- IMMEDIATE UI FIX: FORCE REMOVE LOADER AFTER 2 SECONDS ---
 const forceHideLoader = () => {
     const loaderEl = document.getElementById('loader');
@@ -23,49 +23,47 @@ try {
 let selectedProductForSize = null;
 let selectedColor = null;
 let activeCategory = "all";
-let remoteProducts = []; // To store products from Supabase
+let remoteProducts = []; // To store products from Firebase
 let shippingCosts = {};
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
 ];
 
-// Supabase Config
-const SUPABASE_URL = 'https://ymdnfohikgjkvdmdrthe.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_J0JuDItWsSggSZPj0ATwYA_xXlGI92x';
-const db_client = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// Firebase Config
+const firebaseConfig = {
+    apiKey: "AIzaSyBFRqe3lhvzG0FoN0uAJlAP-VEz9bKLjUc",
+    authDomain: "mre23-4644a.firebaseapp.com",
+    projectId: "mre23-4644a",
+    storageBucket: "mre23-4644a.firebasestorage.app",
+    messagingSenderId: "179268769077",
+    appId: "1:179268769077:web:d9fb8cd25ad284ae0de87c"
+};
 
-// Initialize Auth
+// Initialize Firebase
 let currentUser = null;
+let db = null;
 
-if (db_client) {
-    // Initial UI check from LocalStorage (for instant feedback)
-    const cachedUser = localStorage.getItem('diesel_user_cache');
-    if (cachedUser) {
-        try {
-            const data = JSON.parse(cachedUser);
-            renderAuthUI(data.name);
-        } catch (e) { }
+try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+
+        // Auth State Listener
+        firebase.auth().onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
+                localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
+                updateAuthUI();
+                loadCartFromFirebase();
+            } else {
+                localStorage.removeItem('diesel_user_cache');
+                updateAuthUI();
+            }
+        });
     }
-
-    // Auth State Listener
-    db_client.auth.onAuthStateChange((event, session) => {
-        currentUser = session?.user || null;
-        if (currentUser) {
-            const name = currentUser.user_metadata?.full_name?.split(' ')[0] || 'حسابي';
-            localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
-            updateAuthUI();
-            loadCartFromDB();
-        } else {
-            localStorage.removeItem('diesel_user_cache');
-            updateAuthUI();
-        }
-    });
-
-    // Check initial session
-    db_client.auth.getSession().then(({ data: { session } }) => {
-        currentUser = session?.user || null;
-        updateAuthUI();
-    });
+} catch (error) {
+    console.warn("Firebase failed to initialize:", error);
 }
 
 // Separate rendering from logic for reuse
@@ -124,9 +122,6 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     initAll();
 }
 
-// Emergency Fallback
-setTimeout(hideLoader, 5000);
-
 function initElements() {
     menContainer = document.getElementById('men-products');
     cartBtn = document.getElementById('cart-btn');
@@ -153,10 +148,10 @@ async function loadShippingData() {
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
     }
 
-    if (db_client) {
+    if (db) {
         try {
-            const { data } = await db_client.from('settings').select('costs').eq('id', 'shipping').single();
-            if (data) shippingCosts = data.costs || {};
+            const doc = await db.collection('settings').doc('shipping').get();
+            if (doc.exists) shippingCosts = doc.data() || {};
         } catch (e) { console.error("Error loading shipping costs", e); }
     }
 }
@@ -195,10 +190,6 @@ function setupEventListeners() {
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) navbar?.classList.add('scrolled');
         else navbar?.classList.remove('scrolled');
-    });
-
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.onclick = () => closeMobileMenu();
     });
 
     document.querySelectorAll('.main-filter-btn').forEach(btn => {
@@ -252,35 +243,24 @@ function setupEventListeners() {
             const shippingCost = shippingCosts[gov] || 0;
             const itemsTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
 
-            if (!gov) {
-                alert("برجاء اختيار المحافظة!");
-                submitBtn.disabled = false;
-                submitBtn.innerText = "تأكيد الطلب الآن ✨";
-                return;
-            }
-
             const orderData = {
-                customer_name: document.getElementById('customer-name').value,
+                customerName: document.getElementById('customer-name').value,
                 phone: document.getElementById('customer-phone').value,
                 gov: gov,
                 address: document.getElementById('customer-address').value,
                 items: cart,
-                items_total: itemsTotal,
-                shipping_cost: shippingCost,
                 total: itemsTotal + shippingCost,
                 status: "جديد",
-                payment_method: 'عند الاستلام',
-                user_id: currentUser ? currentUser.id : null,
-                user_email: currentUser ? currentUser.email : null
+                paymentStatus: 'كاش/عند الاستلام',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                userEmail: currentUser ? currentUser.email : 'زائر'
             };
 
             try {
-                const { error } = await db_client.from('orders').insert(orderData);
-                if (error) throw error;
-
+                await db.collection('orders').add(orderData);
                 cart = [];
                 updateCartUI();
-                saveCartToDB();
+                localStorage.setItem('diesel_cart', JSON.stringify(cart));
                 document.getElementById('checkout-modal').classList.remove('active');
                 document.getElementById('success-modal').classList.add('active');
                 orderForm.reset();
@@ -294,14 +274,14 @@ function setupEventListeners() {
         };
     }
 
-    const gLogin = document.getElementById('google-login-btn');
-    if (gLogin) gLogin.onclick = signInWithGoogle;
-
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) logoutBtn.onclick = signOutUser;
-
     const myOrdersBtn = document.getElementById('my-orders-btn');
-    if (myOrdersBtn) myOrdersBtn.onclick = (e) => { e.preventDefault(); openMyOrdersModal(); };
+    if (myOrdersBtn) {
+        myOrdersBtn.onclick = (e) => {
+            e.preventDefault();
+            if (currentUser) openMyOrdersModal();
+            else signInWithGoogle();
+        };
+    }
 
     const closeOrders = document.getElementById('close-orders-modal');
     if (closeOrders) closeOrders.onclick = () => document.getElementById('my-orders-modal').classList.remove('active');
@@ -311,13 +291,13 @@ function renderAll() {
     if (!menContainer) return;
     menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff;">جاري تحميل المنتجات...</div>';
 
-    if (db_client) {
-        db_client.from('products').select('*').eq('status', 'active').then(({ data, error }) => {
-            if (error) renderFallback();
-            else {
-                remoteProducts = data;
-                filterAndRender('men', activeCategory, 'all');
-            }
+    if (db) {
+        db.collection('products').where('status', '==', 'active').get().then(snapshot => {
+            remoteProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            filterAndRender('men', activeCategory, 'all');
+        }).catch(err => {
+            console.error(err);
+            renderFallback();
         });
     } else renderFallback();
 }
@@ -351,21 +331,12 @@ window.applySubFilter = (parent, subId, btn) => {
 
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
-    let filtered = remoteProducts.filter(p => p.status !== 'hidden');
+    let filtered = remoteProducts;
 
     if (parent !== 'all') {
-        if (parent === 'clothes') {
-            const clothesSubs = parentSubMap.clothes.map(s => s.id);
-            filtered = filtered.filter(p => clothesSubs.includes(p.sub_category) || p.parent_category === 'clothes');
-        } else if (parent === 'pants') {
-            const pantsSubs = parentSubMap.pants.map(s => s.id);
-            filtered = filtered.filter(p => pantsSubs.includes(p.sub_category) || p.parent_category === 'pants');
-        } else {
-            filtered = filtered.filter(p => p.parent_category === parent || p.sub_category === parent);
-        }
+        filtered = filtered.filter(p => p.parentCategory === parent);
     }
-
-    if (sub !== 'all') filtered = filtered.filter(p => p.sub_category === sub);
+    if (sub !== 'all') filtered = filtered.filter(p => p.subCategory === sub);
 
     if (filtered.length === 0) {
         menContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; opacity:0.5;">لا توجد نتائج مطابقة</div>`;
@@ -373,7 +344,7 @@ function filterAndRender(section, parent, sub) {
     }
 
     menContainer.innerHTML = filtered.map(p => `
-        <div class="product-card" data-aos="fade-up">
+        <div class="product-card">
             <div class="product-img">
                 ${p.badge ? `<span class="badge">${p.badge}</span>` : ''}
                 <img src="${p.image}" loading="lazy" alt="${p.name}">
@@ -394,17 +365,15 @@ window.openSizeModal = (id) => {
     const p = remoteProducts.find(prod => prod.id == id);
     if (!p) return;
     selectedProductForSize = p;
-    selectedColor = (p.color_variants && p.color_variants.length > 0) ? p.color_variants[0].name : "أساسي";
+    selectedColor = (p.colorVariants && p.colorVariants.length > 0) ? p.colorVariants[0].name : "أساسي";
 
     modalProductName.innerText = p.name;
     modalProductPrice.innerText = `${p.price} جنيه`;
     document.getElementById('modal-img').src = p.image;
 
     const colorContainer = document.getElementById('modal-color-options');
-    const colors = (p.color_variants && p.color_variants.length > 0) ? p.color_variants.map(v => v.name) : ["أساسي"];
+    const colors = (p.colorVariants && p.colorVariants.length > 0) ? p.colorVariants.map(v => v.name) : ["أساسي"];
     colorContainer.innerHTML = colors.map((c, i) => `<button class="color-btn ${i === 0 ? 'selected' : ''}" onclick="modalSelectColor('${c}', this)">${c}</button>`).join('');
-
-    if (p.color_variants && p.color_variants[0]?.image) document.getElementById('modal-img').src = p.color_variants[0].image;
 
     renderModalSizes(p, selectedColor);
     sizeModal.classList.add('active');
@@ -415,8 +384,8 @@ window.modalSelectColor = (color, btn) => {
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     const p = selectedProductForSize;
-    if (p.color_variants) {
-        const v = p.color_variants.find(x => x.name === color);
+    if (p.colorVariants) {
+        const v = p.colorVariants.find(x => x.name === color);
         document.getElementById('modal-img').src = v?.image || p.image;
         renderModalSizes(p, color);
     }
@@ -424,20 +393,17 @@ window.modalSelectColor = (color, btn) => {
 
 function renderModalSizes(p, color) {
     const container = document.querySelector('.size-options');
-    const sizeLabel = document.querySelector('.size-label:last-of-type');
     let sizes = p.sizes || [];
 
-    if (p.color_variants) {
-        const v = p.color_variants.find(x => x.name === color);
+    if (p.colorVariants) {
+        const v = p.colorVariants.find(x => x.name === color);
         if (v?.sizes) sizes = v.sizes;
     }
 
     if (sizes.length > 0) {
-        if (sizeLabel) sizeLabel.style.display = 'block';
         container.innerHTML = sizes.map(s => `<button class="size-btn" onclick="addToCartFromModal('${s}')">${s}</button>`).join('');
     } else {
-        if (sizeLabel) sizeLabel.style.display = 'none';
-        container.innerHTML = '<p style="color:var(--primary); font-weight:bold; width:100%; margin:10px 0;">غير متوفر حالياً</p>';
+        container.innerHTML = '<p style="color:var(--primary); font-weight:bold;">غير متوفر حالياً</p>';
     }
 }
 
@@ -447,8 +413,8 @@ window.addToCartFromModal = (size) => {
     const cartId = `${p.id}-${size}-${color}`;
 
     let img = p.image;
-    if (p.color_variants) {
-        const v = p.color_variants.find(x => x.name === color);
+    if (p.colorVariants) {
+        const v = p.colorVariants.find(x => x.name === color);
         if (v?.image) img = v.image;
     }
 
@@ -457,7 +423,7 @@ window.addToCartFromModal = (size) => {
     else cart.push({ ...p, cartId, size, color, quantity: 1, image: img });
 
     updateCartUI();
-    saveCartToDB();
+    localStorage.setItem('diesel_cart', JSON.stringify(cart));
     sizeModal.classList.remove('active');
     openCartSidebar();
 };
@@ -469,7 +435,7 @@ function updateCartUI() {
     if (!list) return;
 
     if (cart.length === 0) {
-        list.innerHTML = '<div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; opacity:0.5; gap:20px;"><i class="fas fa-shopping-bag" style="font-size:3rem;"></i><p>السلة فارغة</p></div>';
+        list.innerHTML = '<p class="empty-msg">السلة فارغة</p>';
         totalEl.innerText = '0 جنيه';
     } else {
         list.innerHTML = cart.map(i => `
@@ -479,9 +445,9 @@ function updateCartUI() {
                     <h4>${i.name}</h4>
                     <div class="cart-item-details">${i.size} | ${i.color}</div>
                     <div class="qty-control">
-                        <button class="qty-btn-inc" onclick="updateCartQuantity('${i.cartId}', 1)">+</button>
+                        <button class="qty-btn" onclick="updateCartQuantity('${i.cartId}', 1)">+</button>
                         <span>${i.quantity}</span>
-                        <button class="qty-btn-dec" onclick="updateCartQuantity('${i.cartId}', -1)">−</button>
+                        <button class="qty-btn" onclick="updateCartQuantity('${i.cartId}', -1)">−</button>
                     </div>
                 </div>
                 <div class="delete-btn" onclick="removeFromCart('${i.cartId}')"><i class="fas fa-trash-alt"></i></div>
@@ -493,86 +459,58 @@ function updateCartUI() {
 
 window.updateCartQuantity = (id, d) => {
     const i = cart.find(x => x.cartId === id);
-    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); saveCartToDB(); } }
+    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); localStorage.setItem('diesel_cart', JSON.stringify(cart)); } }
 };
 
-window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); saveCartToDB(); };
+window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); localStorage.setItem('diesel_cart', JSON.stringify(cart)); };
 function openCartSidebar() { cartSidebar.classList.add('open'); cartOverlay.classList.add('show'); }
 function closeCartSidebar() { cartSidebar.classList.remove('open'); cartOverlay.classList.remove('show'); }
-function closeMobileMenu() { mobileMenuBtn?.classList.remove('active'); navLinks?.classList.remove('active'); }
 
 async function signInWithGoogle() {
-    if (!db_client) return;
-    try { await db_client.auth.signInWithOAuth({ provider: 'google' }); } catch (e) { alert("خطأ في الدخول"); }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try { await firebase.auth().signInWithPopup(provider); } catch (e) { console.error(e); }
 }
 
 async function signOutUser() {
-    if (!db_client) return;
-    await db_client.auth.signOut();
-    cart = [];
-    localStorage.removeItem('diesel_cart');
-    updateCartUI();
-    document.getElementById('my-orders-modal').classList.remove('active');
+    await firebase.auth().signOut();
+    location.reload();
 }
 
 function updateAuthUI() {
-    const name = currentUser ? (currentUser.user_metadata?.full_name?.split(' ')[0] || 'حسابي') : null;
+    const name = currentUser ? currentUser.displayName.split(' ')[0] : null;
     renderAuthUI(name);
 }
 
-window.openMyOrdersModal = () => {
+function openMyOrdersModal() {
     const modal = document.getElementById('my-orders-modal');
-    const loginSection = document.getElementById('orders-login-section');
-    const listSection = document.getElementById('orders-list-section');
-
-    if (currentUser) {
-        loginSection.style.display = 'none';
-        listSection.style.display = 'block';
-        document.getElementById('user-email-display').innerText = currentUser.email;
-        loadMyOrders();
-    } else {
-        loginSection.style.display = 'block';
-        listSection.style.display = 'none';
-    }
     modal.classList.add('active');
-};
+    loadMyOrders();
+}
 
 async function loadMyOrders() {
     const list = document.getElementById('my-orders-list');
     list.innerHTML = 'جاري التحميل...';
     try {
-        const { data } = await db_client.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-        list.innerHTML = data.map(o => `
-            <div class="order-card-mini">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span>${new Date(o.created_at).toLocaleDateString('ar-EG')}</span>
-                    <span class="order-status">${o.status}</span>
+        const snapshot = await db.collection('orders').where('userEmail', '==', currentUser.email).orderBy('createdAt', 'desc').get();
+        list.innerHTML = snapshot.docs.map(doc => {
+            const o = doc.data();
+            return `
+                <div class="order-card-mini">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>${o.createdAt ? o.createdAt.toDate().toLocaleDateString('ar-EG') : ''}</span>
+                        <span class="order-status">${o.status}</span>
+                    </div>
+                    <div>${o.items.map(i => `<div style="font-size:0.9rem;">${i.name} x${i.quantity}</div>`).join('')}</div>
+                    <div style="margin-top:10px; font-weight:bold;">الإجمالي: ${o.total} جنيه</div>
                 </div>
-                <div>${o.items.map(i => `<div style="font-size:0.9rem;">${i.name} x${i.quantity}</div>`).join('')}</div>
-                <div style="margin-top:10px; font-weight:bold;">الإجمالي: ${o.total} جنيه</div>
-            </div>
-        `).join('') || '<div style="text-align:center; padding:40px; opacity:0.5;">لا توجد طلبات</div>';
-    } catch (e) { list.innerHTML = 'خطأ في التحميل'; }
-}
-
-async function saveCartToDB() {
-    localStorage.setItem('diesel_cart', JSON.stringify(cart));
-    if (currentUser && db_client) {
-        await db_client.from('carts').upsert({ user_id: currentUser.id, items: cart });
-    }
-}
-
-async function loadCartFromDB() {
-    if (!currentUser || !db_client) return;
-    const { data } = await db_client.from('carts').select('items').eq('user_id', currentUser.id).single();
-    if (data?.items?.length > 0) { cart = data.items; updateCartUI(); }
+            `;
+        }).join('') || '<p style="text-align:center; padding:20px;">لا توجد طلبات</p>';
+    } catch (e) { list.innerHTML = 'حدث خطأ في جلب الطلبات'; }
 }
 
 function initTheme() {
     const theme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-    const icon = themeToggle?.querySelector('i');
-    if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
 function toggleTheme() {
@@ -580,8 +518,6 @@ function toggleTheme() {
     const next = cur === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
-    const icon = themeToggle?.querySelector('i');
-    if (icon) icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
 function closeSuccessModal() { document.getElementById('success-modal')?.classList.remove('active'); }

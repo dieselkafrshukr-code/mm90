@@ -1,67 +1,57 @@
 
-// 🚀 DIESEL ADMIN ENGINE - HYBRID VERSION (Supabase Edition)
-const SUPABASE_URL = 'https://ymdnfohikgjkvdmdrthe.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_J0JuDItWsSggSZPj0ATwYA_xXlGI92x';
-const db_client = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// 🚀 DIESEL ADMIN ENGINE - HYBRID VERSION (Firebase Version)
+const firebaseConfig = {
+    apiKey: "AIzaSyBFRqe3lhvzG0FoN0uAJlAP-VEz9bKLjUc",
+    authDomain: "mre23-4644a.firebaseapp.com",
+    projectId: "mre23-4644a",
+    storageBucket: "mre23-4644a.firebasestorage.app",
+    messagingSenderId: "179268769077",
+    appId: "1:179268769077:web:d9fb8cd25ad284ae0de87c"
+};
 
+let db = null;
 let productsCol = null;
-let isSupabaseReady = !!db_client;
+let isFirebaseReady = false;
 let adminRole = localStorage.getItem('adminRole') || 'none';
-let currentUser = null;
 
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
 ];
 
-// Initialize Supabase Auth Logic
-async function initAdminAuth() {
-    if (!db_client) return;
+// Initialize Firebase
+try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        productsCol = db.collection('products');
+        isFirebaseReady = true;
 
-    // SECURITY: If we came from the home page button, force a logout to ask for credentials again
-    if (sessionStorage.getItem('force_admin_login') === 'true') {
-        sessionStorage.removeItem('force_admin_login');
-        await db_client.auth.signOut();
-        localStorage.removeItem('adminRole');
-        adminRole = 'none';
-        console.log("🔒 Security: Fresh login forced from home page.");
+        firebase.auth().onAuthStateChanged(user => {
+            const loginOverlay = document.getElementById('login-overlay');
+            const adminContent = document.getElementById('admin-main-content');
+
+            if (user) {
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                if (adminContent) adminContent.style.display = 'block';
+                applyRoleRestrictions();
+
+                if (adminRole === 'all' || adminRole === 'products') { showTab('products'); loadProducts(); }
+                else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
+                else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
+            } else {
+                if (loginOverlay) loginOverlay.style.display = 'flex';
+                if (adminContent) adminContent.style.display = 'none';
+            }
+            showLoader(false);
+        });
     }
-
-    const { data: { session } } = await db_client.auth.getSession();
-    handleAdminAuthChange(session);
-
-    db_client.auth.onAuthStateChange((_event, session) => {
-        handleAdminAuthChange(session);
-    });
-}
-
-function handleAdminAuthChange(session) {
-    const loginOverlay = document.getElementById('login-overlay');
-    const adminContent = document.getElementById('admin-main-content');
-    currentUser = session?.user || null;
-
-    if (currentUser) {
-        if (loginOverlay) loginOverlay.style.display = 'none';
-        if (adminContent) adminContent.style.display = 'block';
-        applyRoleRestrictions();
-
-        // Auto load based on role
-        if (adminRole === 'products' || adminRole === 'all') { showTab('products'); loadProducts(); }
-        else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
-        else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
-    } else {
-        if (loginOverlay) loginOverlay.style.display = 'flex';
-        if (adminContent) adminContent.style.display = 'none';
-    }
+} catch (error) {
+    console.error("Firebase init failed", error);
     showLoader(false);
 }
 
-// Emergency Fallback for Global Loader
+// Emergency Fallback
 setTimeout(() => showLoader(false), 5000);
-
-document.addEventListener('DOMContentLoaded', () => {
-    initAdminAuth();
-    setupAdminEventListeners();
-});
 
 function showLoader(show) {
     const l = document.getElementById('global-loader');
@@ -75,7 +65,8 @@ function showTab(tab) {
     document.getElementById('products-section').style.display = 'none';
     document.getElementById('orders-section').style.display = 'none';
     document.getElementById('shipping-section').style.display = 'none';
-    document.getElementById(`${tab}-section`).style.display = 'block';
+    const section = document.getElementById(`${tab}-section`);
+    if (section) section.style.display = 'block';
 }
 
 function applyRoleRestrictions() {
@@ -90,57 +81,78 @@ function applyRoleRestrictions() {
     else if (adminRole === 'orders') { hide(tabProducts); show(tabOrders); hide(tabShipping); }
     else if (adminRole === 'shipping') { hide(tabProducts); hide(tabOrders); show(tabShipping); }
     else if (adminRole === 'all') { show(tabProducts); show(tabOrders); show(tabShipping); }
-    else { hide(tabProducts); hide(tabOrders); hide(tabShipping); }
 }
 
-// Placeholder functions for the rest of admin.js logic which would be tied to Supabase
 async function loadProducts() {
-    showLoader(true);
-    const { data, error } = await db_client.from('products').select('*');
-    // ... rendering logic ...
-    showLoader(false);
+    if (!db) return;
+    const snapshot = await productsCol.get();
+    const productsList = document.getElementById('products-list');
+    if (!productsList) return;
+
+    productsList.innerHTML = snapshot.docs.map(doc => {
+        const p = doc.data();
+        return `
+            <div class="product-item">
+                <img src="${p.image}" style="width:50px; height:50px; object-fit:cover;">
+                <div>
+                    <strong>${p.name}</strong><br>
+                    <span>${p.price} جنيه</span>
+                </div>
+            </div>
+        `;
+    }).join('') || '<p>لا توجد منتجات</p>';
 }
 
 async function loadOrders() {
-    showLoader(true);
-    const { data, error } = await db_client.from('orders').select('*').order('created_at', { ascending: false });
-    // ... rendering logic ...
-    showLoader(false);
+    if (!db) return;
+    const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+    const ordersList = document.getElementById('orders-list');
+    if (!ordersList) return;
+
+    ordersList.innerHTML = snapshot.docs.map(doc => {
+        const o = doc.data();
+        return `
+            <div class="order-card">
+                <h3>طلبية من: ${o.customerName}</h3>
+                <p>الهاتف: ${o.phone}</p>
+                <p>الإجمالي: ${o.total} جنيه</p>
+                <p>الحالة: ${o.status}</p>
+            </div>
+        `;
+    }).join('') || '<p>لا توجد طلبات</p>';
 }
 
 async function loadShippingCosts() {
-    const { data } = await db_client.from('settings').select('costs').eq('id', 'shipping').single();
-    // ...
+    const doc = await db.collection('settings').doc('shipping').get();
+    const costs = doc.data() || {};
+    // ... rendering for shipping section ...
 }
 
-function setupAdminEventListeners() {
-    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-password').value;
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
 
-        // Manual Role check (as before)
-        if (pass === "diesel_prod") adminRole = 'products';
-        else if (pass === "diesel_order") adminRole = 'orders';
-        else if (pass === "diesel_ship") adminRole = 'shipping';
-        else if (pass === "ديزل_كل_حاجة") adminRole = 'all';
-        else {
-            document.getElementById('login-error').innerText = "كلمة مرور غير صحيحة!";
-            document.getElementById('login-error').style.display = 'block';
-            return;
-        }
+    // Passwords for roles
+    if (pass === "diesel_prod") adminRole = 'products';
+    else if (pass === "diesel_order") adminRole = 'orders';
+    else if (pass === "diesel_ship") adminRole = 'shipping';
+    else if (pass === "ديزل_كل_حاجة") adminRole = 'all';
+    else {
+        alert("كلمة مرور غير صحيحة!");
+        return;
+    }
 
-        localStorage.setItem('adminRole', adminRole);
-        const { error } = await db_client.auth.signInWithPassword({ email, password: pass });
-        if (error) {
-            document.getElementById('login-error').innerText = error.message;
-            document.getElementById('login-error').style.display = 'block';
-        }
-    });
+    localStorage.setItem('adminRole', adminRole);
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, pass);
+    } catch (err) {
+        alert("خطأ في تسجيل الدخول: " + err.message);
+    }
+});
 
-    document.getElementById('btn-logout')?.addEventListener('click', async () => {
-        await db_client.auth.signOut();
-        localStorage.removeItem('adminRole');
-        location.reload();
-    });
-}
+document.getElementById('logout-btn')?.addEventListener('click', () => {
+    firebase.auth().signOut();
+    localStorage.removeItem('adminRole');
+    location.reload();
+});
