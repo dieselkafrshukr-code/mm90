@@ -233,20 +233,25 @@
 
         <!-- Auth Prompt in Cart -->
         <div id="cart-auth-box"
-            style="padding: 15px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
+            style="padding: 25px 15px; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
             <div id="cart-auth-logged-out">
-                <p style="font-size: 0.85rem; margin-bottom: 10px; opacity: 0.7;">سجل دخولك لمتابعة طلبك لاحقاً</p>
-                <button onclick="signInWithGoogle()"
-                    style="background: #fff; color: #000; border: none; padding: 8px 15px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto;">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 14px;">
-                    بدخول بجوجل
+                <p
+                    style="font-size: 1rem; margin-bottom: 18px; opacity: 0.8; font-weight: 700; font-family: 'Cairo', sans-serif;">
+                    سجل دخول لمتابعة طلبك ✨</p>
+                <button onclick="signInWithGoogle()" class="btn-google-login"
+                    style="padding: 12px 20px !important; font-size: 1rem !important;">
+                    <span style="flex: 1; text-align: center; margin-left: 10px;">دخول بجوجل</span>
+                    <div class="google-icon-wrapper" style="width: 26px; height: 26px;">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
+                            style="width: 14px; height: 14px;">
+                    </div>
                 </button>
             </div>
             <div id="cart-auth-logged-in" style="display: none; align-items: center; justify-content: space-between;">
-                <span id="cart-user-name" style="font-size: 0.85rem; font-weight: bold;"></span>
+                <span id="cart-user-name" style="font-size: 0.9rem; font-weight: 800;"></span>
                 <button onclick="signOutUser()"
-                    style="background: rgba(226, 6, 19, 0.1); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer;">
-                    خروج <i class="fas fa-sign-out-alt"></i>
+                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 15px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                    خروج
                 </button>
             </div>
         </div>
@@ -373,47 +378,54 @@
 
     <!-- My Orders Modal -->
     <div id="my-orders-modal" class="modal">
-        <div class="modal-box" style="max-width: 480px; width: 92%; padding: 25px;">
-            <button id="close-orders-modal" class="close-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-box"
+            style="max-width: 420px; width: 92%; padding: 40px 30px; border-radius: 25px; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <button id="close-orders-modal" class="close-modal"
+                style="top: 20px; right: 20px; background: rgba(255,255,255,0.05); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1);"><i
+                    class="fas fa-times"></i></button>
 
             <!-- Login Section (shown when not logged in) -->
-            <div id="orders-login-section" style="width: 100%; display: none; text-align: center; padding: 10px 0;">
-                <i class="fas fa-box-open"
-                    style="font-size: 2.8rem; color: var(--primary); margin-bottom: 15px; display: block;"></i>
-                <h2 style="margin-bottom: 10px; font-weight: 800; font-size: 1.4rem;">تتبع طلباتك</h2>
-                <p style="margin-bottom: 20px; opacity: 0.6; font-size: 0.9rem; line-height: 1.5;">
-                    سجل دخول لمتابعة طلباتك
+            <div id="orders-login-section" style="width: 100%; display: none; text-align: center;">
+                <div
+                    style="background: var(--primary); width: 70px; height: 60px; margin: 0 auto 25px; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; box-shadow: 0 10px 20px rgba(226, 6, 19, 0.3);">
+                    <i class="fas fa-box" style="font-size: 2.2rem; color: #fff;"></i>
+                    <div
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+
+                <h2
+                    style="margin-bottom: 8px; font-weight: 900; font-size: 2.2rem; font-family: 'Cairo', sans-serif; color: #fff;">
+                    تتبع طلباتك</h2>
+                <p
+                    style="margin-bottom: 35px; opacity: 0.8; font-size: 1.1rem; line-height: 1.5; font-family: 'Cairo', sans-serif; color: #fff;">
+                    سجل دخول بحساب جوجل لمتابعة حالة طلباتك
                 </p>
-                <button id="google-login-btn"
-                    style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 22px; background: var(--primary); border: none; border-radius: 8px; color: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                        style="width: 18px; height: 18px;">
-                    <span>دخول بجوجل</span>
+
+                <button id="google-login-btn" class="btn-google-login">
+                    <span style="flex: 1; text-align: center; margin-left: 20px;">تسجيل الدخول بجوجل</span>
+                    <div class="google-icon-wrapper">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    </div>
                 </button>
             </div>
 
             <!-- Orders Section (shown when logged in) -->
             <div id="orders-list-section" style="display: none; width: 100%;">
                 <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <div style="flex: 1;">
-                        <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700;">
-                            <i class="fas fa-box" style="color: var(--primary); font-size: 0.95rem;"></i> طلباتي
-                        </h2>
-                        <p id="user-email-display"
-                            style="font-size: 0.7rem; opacity: 0.5; margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        </p>
+                        <h2 style="margin: 0; font-size: 1.2rem; font-weight: 800;">طلباتي</h2>
+                        <p id="user-email-display" style="font-size: 0.75rem; opacity: 0.5; margin-top: 5px;"></p>
                     </div>
                     <button id="logout-btn"
-                        style="background: rgba(226, 6, 19, 0.15); border: 1px solid var(--primary); color: var(--primary); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 5px; transition: all 0.2s;">
-                        <i class="fas fa-sign-out-alt" style="font-size: 0.7rem;"></i>
-                        <span>خروج</span>
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-size: 0.85rem; font-weight: 700;">
+                        خروج
                     </button>
                 </div>
 
-                <div id="my-orders-list" style="max-height: 400px; overflow-y: auto;">
-                    <div style="text-align: center; padding: 30px; opacity: 0.4; font-size: 0.85rem;">جاري التحميل...
-                    </div>
+                <div id="my-orders-list" style="max-height: 450px; overflow-y: auto; padding-right: 5px;">
+                    <div style="text-align: center; padding: 40px; opacity: 0.5;">جاري تحميل طلباتك...</div>
                 </div>
             </div>
         </div>
