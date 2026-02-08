@@ -205,6 +205,8 @@ window.updateCheckoutTotal = () => {
     const totalEl = document.getElementById('form-total-price');
 
     if (shippingEl) shippingEl.innerText = `${cost} جنيه`;
+    else console.warn("⚠️ Element #shipping-cost not found!");
+
     if (totalEl) totalEl.innerText = `${itemsTotal + cost} جنيه`;
 };
 
