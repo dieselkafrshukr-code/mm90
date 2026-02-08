@@ -66,19 +66,34 @@ try {
     console.warn("Firebase failed to initialize:", error);
 }
 
-// Fixed Login Logic
+
+// Fixed Login Logic - TEMPORARILY DISABLED until Google Provider is enabled in Firebase
 window.signInWithGoogle = async function () {
+    alert("⚠️ تسجيل الدخول بجوجل غير مفعل حالياً\n\nيمكنك التسوق والطلب كزائر بدون تسجيل دخول.\n\nلتفعيل تسجيل الدخول، يرجى:\n1. الدخول إلى Firebase Console\n2. Authentication > Sign-in method\n3. تفعيل Google Provider");
+
+    /* INSTRUCTIONS TO ENABLE GOOGLE LOGIN:
+     * 1. Go to: https://console.firebase.google.com/
+     * 2. Select your project: mre23-4644a
+     * 3. Go to: Authentication > Sign-in method
+     * 4. Click on "Google" and Enable it
+     * 5. Save changes
+     * 
+     * Then uncomment the code below:
+     
     const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-        await firebase.auth().signInWithPopup(provider);
-    } catch (e) {
-        console.error("Google Login Error:", e);
+    try { 
+        await firebase.auth().signInWithPopup(provider); 
+    } catch (e) { 
+        console.error("Google Login Error:", e); 
         alert("فشل تسجيل الدخول - تأكد من اتصالك بالإنترنت");
     }
+    */
 };
 
 window.signOutUser = async function () {
-    await firebase.auth().signOut();
+    if (firebase && firebase.auth) {
+        await firebase.auth().signOut();
+    }
     location.reload();
 };
 
@@ -308,19 +323,34 @@ function renderAll() {
     menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff;">جاري تحميل المنتجات...</div>';
 
     if (db) {
-        db.collection('products').where('status', '==', 'active').get().then(snapshot => {
+        // Load ALL products (removed status filter to ensure products show)
+        db.collection('products').get().then(snapshot => {
+            console.log(`🔥 Firebase: تم تحميل ${snapshot.docs.length} منتج`);
             remoteProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            filterAndRender('men', activeCategory, 'all');
+
+            if (remoteProducts.length === 0) {
+                menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff; opacity:0.7;">⚠️ لا توجد منتجات في قاعدة البيانات. استخدم لوحة التحكم لإضافة منتجات.</div>';
+            } else {
+                filterAndRender('men', activeCategory, 'all');
+            }
         }).catch(err => {
-            console.error(err);
+            console.error("❌ Firebase Error:", err);
+            menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#f44336;">⚠️ خطأ في الاتصال بقاعدة البيانات</div>';
             renderFallback();
         });
-    } else renderFallback();
+    } else {
+        console.warn("⚠️ Firebase غير متاح، استخدام المنتجات المحلية");
+        renderFallback();
+    }
 }
 
 function renderFallback() {
     remoteProducts = typeof products !== 'undefined' ? products : [];
-    filterAndRender('men', activeCategory, 'all');
+    if (remoteProducts.length === 0) {
+        menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff; opacity:0.7;">لا توجد منتجات</div>';
+    } else {
+        filterAndRender('men', activeCategory, 'all');
+    }
 }
 
 function renderSubFilters(parent) {
