@@ -395,13 +395,20 @@ window.applySubFilter = (parent, subId, btn) => {
 
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
-    // Hide products that are explicitly set to inactive
-    let filtered = remoteProducts.filter(p => p.active !== false);
+
+    // 🛡️ STRONGER FILTER: Hide products if active is explicitly false or "false"
+    let filtered = remoteProducts.filter(p => p.active !== false && p.active !== "false");
 
     if (parent !== 'all') {
-        filtered = filtered.filter(p => p.parentCategory === parent);
+        // Support both parentCategory (old) and category (admin)
+        filtered = filtered.filter(p => (p.parentCategory === parent || p.category === parent));
     }
-    if (sub !== 'all') filtered = filtered.filter(p => p.subCategory === sub);
+
+    if (sub !== 'all') {
+        filtered = filtered.filter(p => p.subCategory === sub);
+    }
+
+    console.log(`🔍 [Filter] Total: ${remoteProducts.length} | Visible: ${filtered.length} | Hidden: ${remoteProducts.length - filtered.length}`);
 
     if (filtered.length === 0) {
         menContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; opacity:0.5;">لا توجد نتائج مطابقة</div>`;

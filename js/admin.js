@@ -143,6 +143,89 @@ window.deleteProduct = async function (id) {
     }
 };
 
+// --- Missing Functions from HTML ---
+const parentSubMap = {
+    clothes: [{ id: 'hoodies', label: 'هوديز' }, { id: 'jackets', label: 'جواكت' }, { id: 'pullover', label: 'بلوفر' }, { id: 'shirts', label: 'قمصان' }, { id: 'coats', label: 'بالطو' }, { id: 'tshirts', label: 'تيشيرت' }, { id: 'polo', label: 'بولو' }],
+    pants: [{ id: 'jeans', label: 'جينز' }, { id: 'sweatpants', label: 'سويت بانتس' }],
+    shoes: []
+};
+window.updateSubCats = () => {
+    const pCat = document.getElementById('p-category').value;
+    const subSelect = document.getElementById('p-subcategory');
+    const subs = parentSubMap[pCat] || [];
+    subSelect.innerHTML = '<option value="all">الكل</option>' + subs.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+};
+window.toggleForm = (show = null) => {
+    const f = document.getElementById('productForm');
+    if (!f) return;
+    if (show === null) f.style.display = f.style.display === 'block' ? 'none' : 'block';
+    else f.style.display = show ? 'block' : 'none';
+};
+window.handleImage = (input) => {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('p-image-base64').value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+window.addColorVariant = (data = { name: '', image: '' }) => {
+    const container = document.getElementById('color-variants-container');
+    const div = document.createElement('div');
+    div.className = 'color-variant-input';
+    div.style = "background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px;";
+    div.innerHTML = `<input type="text" placeholder="اسم اللون" value="${data.name}" class="v-name"><input type="text" placeholder="رابط الصورة" value="${data.image}" class="v-image"><button type="button" onclick="this.parentElement.remove()" style="background:none; color:#f44336; border:none; cursor:pointer;">حذف</button>`;
+    container.appendChild(div);
+};
+document.getElementById('saveProductForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const variants = [];
+    document.querySelectorAll('.color-variant-input').forEach(v => {
+        const name = v.querySelector('.v-name').value;
+        const img = v.querySelector('.v-image').value;
+        if (name) variants.push({ name, image: img });
+    });
+    const productData = {
+        name: document.getElementById('p-name').value,
+        price: Number(document.getElementById('p-price').value),
+        category: document.getElementById('p-category').value,
+        subCategory: document.getElementById('p-subcategory').value,
+        image: document.getElementById('p-image-base64').value,
+        sizes: document.getElementById('p-sizes').value.split(',').map(s => s.trim()),
+        badge: document.getElementById('p-badge').value,
+        colorVariants: variants,
+        active: true,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+        showLoader(true);
+        if (id) await productsCol.doc(id).update(productData);
+        else await productsCol.add({ ...productData, createdAt: firebase.firestore.FieldValue.serverTimestamp(), active: true });
+        toggleForm(false);
+        loadProducts();
+        alert("تم الحفظ بنجاح!");
+    } catch (err) { alert("خطأ أثناء الحفظ"); } finally { showLoader(false); }
+});
+window.editProduct = async (id) => {
+    const doc = await productsCol.doc(id).get();
+    const p = doc.data();
+    toggleForm(true);
+    document.getElementById('edit-id').value = id;
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-price').value = p.price;
+    document.getElementById('p-category').value = p.category;
+    document.getElementById('p-sizes').value = p.sizes.join(', ');
+    document.getElementById('p-image-base64').value = p.image;
+    document.getElementById('preview-img').src = p.image;
+    document.getElementById('color-variants-container').innerHTML = '';
+    if (p.colorVariants) p.colorVariants.forEach(v => addColorVariant(v));
+    updateSubCats();
+};
+
 async function loadOrders() {
     if (!db) return;
     const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
