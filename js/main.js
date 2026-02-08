@@ -174,24 +174,40 @@ function initElements() {
 }
 
 async function loadShippingData() {
+    console.log("🚚 [Shipping] Starting loadShippingData...");
+
+    // 1. Populate Dropdown
     const govSelect = document.getElementById('customer-gov');
     if (govSelect) {
         govSelect.innerHTML = '<option value="" disabled selected>اختر المحافظة...</option>' +
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
+        console.log("✅ [Shipping] Governorates dropdown populated.");
+    } else {
+        console.warn("⚠️ [Shipping] Dropdown #customer-gov not found!");
     }
 
-    if (db) {
-        try {
-            const doc = await db.collection('settings').doc('shipping').get();
-            if (doc.exists) {
-                const data = doc.data();
-                // Check both possibilities: nested 'costs' or direct map
-                shippingCosts = data.costs || data || {};
-                console.log("🔥 Final Shipping Data Used:", shippingCosts);
-            } else {
-                console.warn("⚠️ No shipping document found in Firestore!");
-            }
-        } catch (e) { console.error("Error loading shipping costs", e); }
+    // 2. Load Remote Data
+    if (!db) {
+        console.error("❌ [Shipping] DB object is missing! Cannot load costs.");
+        return;
+    }
+
+    try {
+        console.log("🚚 [Shipping] Fetching from Firestore...");
+        const doc = await db.collection('settings').doc('shipping').get();
+
+        if (doc.exists) {
+            const data = doc.data();
+            // Check both possiblities
+            shippingCosts = data.costs || data || {};
+            console.log("🔥 [Shipping] FINAL DATA LOADED:", shippingCosts);
+        } else {
+            console.warn("⚠️ [Shipping] No shipping document found in Firestore!");
+            // Default fallback if needed, or leave empty
+            shippingCosts = {};
+        }
+    } catch (e) {
+        console.error("❌ [Shipping] Error loading data:", e);
     }
 }
 
