@@ -306,13 +306,30 @@ function setupEventListeners() {
     if (myOrdersBtn) {
         myOrdersBtn.onclick = (e) => {
             e.preventDefault();
-            if (currentUser) openMyOrdersModal();
-            else signInWithGoogle();
+            openMyOrdersModal();
         };
     }
 
     const closeOrders = document.getElementById('close-orders-modal');
     if (closeOrders) closeOrders.onclick = () => document.getElementById('my-orders-modal').classList.remove('active');
+
+    // Google login button in orders modal
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    if (googleLoginBtn) {
+        googleLoginBtn.onclick = (e) => {
+            e.preventDefault();
+            signInWithGoogle();
+        };
+    }
+
+    // Logout button in orders modal
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.onclick = (e) => {
+            e.preventDefault();
+            signOutUser();
+        };
+    }
 }
 
 function renderAll() {
@@ -525,30 +542,100 @@ function updateAuthUI() {
 }
 
 function openMyOrdersModal() {
+    console.log("🔓 فتح modal الطلبات...");
     const modal = document.getElementById('my-orders-modal');
+    const loginSection = document.getElementById('orders-login-section');
+    const ordersSection = document.getElementById('orders-list-section');
+    const userEmailDisplay = document.getElementById('user-email-display');
+
+    if (!modal) {
+        console.error("❌ modal الطلبات غير موجود");
+        return;
+    }
+
     modal.classList.add('active');
-    loadMyOrders();
+
+    // Show appropriate section based on login state
+    if (currentUser) {
+        console.log("✅ المستخدم مسجل دخول، عرض الطلبات");
+        if (loginSection) loginSection.style.display = 'none';
+        if (ordersSection) ordersSection.style.display = 'block';
+        if (userEmailDisplay) userEmailDisplay.innerText = currentUser.email;
+        loadMyOrders();
+    } else {
+        console.log("⚠️ المستخدم غير مسجل، عرض صفحة تسجيل الدخول");
+        if (loginSection) loginSection.style.display = 'flex';
+        if (ordersSection) ordersSection.style.display = 'none';
+    }
 }
 
 async function loadMyOrders() {
     const list = document.getElementById('my-orders-list');
-    list.innerHTML = 'جاري التحميل...';
+
+    if (!list) {
+        console.error("❌ عنصر my-orders-list غير موجود في الصفحة");
+        return;
+    }
+
+    list.innerHTML = '<div style="text-align:center; padding:30px;">جاري التحميل...</div>';
+
+    console.log("📋 بدء تحميل الطلبات...");
+
+    // Check if user is logged in
+    if (!currentUser) {
+        console.warn("⚠️ المستخدم غير مسجل دخول");
+        list.innerHTML = '<p style="text-align:center; padding:20px; opacity:0.7;">يرجى تسجيل الدخول لعرض طلباتك</p>';
+        return;
+    }
+
+    // Check if Firebase is available
+    if (!db) {
+        console.error("❌ Firebase غير متصل");
+        list.innerHTML = '<p style="text-align:center; padding:20px; color:#f44336;">خطأ في الاتصال بقاعدة البيانات</p>';
+        return;
+    }
+
     try {
-        const snapshot = await db.collection('orders').where('userEmail', '==', currentUser.email).orderBy('createdAt', 'desc').get();
+        console.log("🔍 البحث عن طلبات المستخدم:", currentUser.email);
+
+        const snapshot = await db.collection('orders')
+            .where('userEmail', '==', currentUser.email)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        console.log(`📦 تم العثور على ${snapshot.docs.length} طلب`);
+
+        if (snapshot.docs.length === 0) {
+            list.innerHTML = '<p style="text-align:center; padding:40px; opacity:0.7;">📭 لا توجد طلبات سابقة</p>';
+            return;
+        }
+
         list.innerHTML = snapshot.docs.map(doc => {
             const o = doc.data();
+            console.log("📄 طلب:", doc.id, o);
+
             return `
-                <div class="order-card-mini">
+                <div class="order-card-mini" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span>${o.createdAt ? o.createdAt.toDate().toLocaleDateString('ar-EG') : ''}</span>
-                        <span class="order-status">${o.status}</span>
+                        <span style="font-size:0.85rem; opacity:0.7;">${o.createdAt ? o.createdAt.toDate().toLocaleDateString('ar-EG') : 'غير محدد'}</span>
+                        <span class="order-status" style="background: #2196F3; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;">${o.status || 'جديد'}</span>
                     </div>
-                    <div>${o.items.map(i => `<div style="font-size:0.9rem;">${i.name} x${i.quantity}</div>`).join('')}</div>
-                    <div style="margin-top:10px; font-weight:bold;">الإجمالي: ${o.total} جنيه</div>
+                    <div style="margin: 10px 0;">
+                        ${o.items ? o.items.map(i => `<div style="font-size:0.9rem; margin: 5px 0;">• ${i.name} × ${i.quantity}</div>`).join('') : 'لا توجد منتجات'}
+                    </div>
+                    <div style="margin-top:12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); font-weight:bold; color: var(--primary);">
+                        الإجمالي: ${o.total || 0} جنيه
+                    </div>
                 </div>
             `;
-        }).join('') || '<p style="text-align:center; padding:20px;">لا توجد طلبات</p>';
-    } catch (e) { list.innerHTML = 'حدث خطأ في جلب الطلبات'; }
+        }).join('');
+
+        console.log("✅ تم عرض الطلبات بنجاح");
+
+    } catch (e) {
+        console.error("❌ خطأ في تحميل الطلبات:", e);
+        list.innerHTML = '<p style="text-align:center; padding:20px; color:#f44336;">حدث خطأ في جلب الطلبات: ' + e.message + '</p>';
+    }
 }
 
 function initTheme() {
