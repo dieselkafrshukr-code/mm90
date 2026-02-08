@@ -91,27 +91,27 @@ async function loadProducts() {
 
     const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Update Stats
-    document.getElementById('stat-total').innerText = products.length;
-    document.getElementById('stat-clothes').innerText = products.filter(p => p.category === 'clothes').length;
-    document.getElementById('stat-shoes').innerText = products.filter(p => p.category === 'shoes').length;
+    // --- Update Stats ---
+    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = products.length;
+    if (document.getElementById('stat-clothes')) document.getElementById('stat-clothes').innerText = products.filter(p => p.category === 'clothes').length;
+    if (document.getElementById('stat-shoes')) document.getElementById('stat-shoes').innerText = products.filter(p => p.category === 'shoes').length;
 
     productsListBody.innerHTML = products.map(p => {
-        const isActive = p.active !== false; // Default to true if not defined
+        const isActive = p.active !== false && p.active !== "false";
         return `
             <tr>
-                <td><img src="${p.image}" class="product-thumb"></td>
-                <td><strong>${p.name}</strong></td>
-                <td>${p.price} جنيه</td>
+                <td><img src="${p.image || ''}" class="product-thumb"></td>
+                <td><strong>${p.name || 'بدون اسم'}</strong></td>
+                <td>${p.price || 0} جنيه</td>
                 <td>${p.category === 'clothes' ? 'ملابس' : p.category === 'shoes' ? 'أحذية' : 'بناطيل'}</td>
                 <td>
                     <div class="actions">
                         <i class="fas ${isActive ? 'fa-eye' : 'fa-eye-slash'}" 
-                           style="color: ${isActive ? '#4CAF50' : '#888'}; cursor: pointer;" 
+                           style="color: ${isActive ? '#4CAF50' : '#888'}; cursor: pointer; font-size: 1.2rem;" 
                            onclick="toggleProductStatus('${p.id}', ${isActive})" 
                            title="${isActive ? 'إخفاء من الموقع' : 'إظهار في الموقع'}"></i>
-                        <i class="fas fa-edit btn-edit" onclick="editProduct('${p.id}')"></i>
-                        <i class="fas fa-trash-alt btn-delete" onclick="deleteProduct('${p.id}')"></i>
+                        <i class="fas fa-edit btn-edit" style="color: #2196F3; cursor: pointer; font-size: 1.2rem;" onclick="editProduct('${p.id}')"></i>
+                        <i class="fas fa-trash-alt btn-delete" style="color: #f44336; cursor: pointer; font-size: 1.2rem;" onclick="deleteProduct('${p.id}')"></i>
                     </div>
                 </td>
             </tr>
@@ -122,11 +122,9 @@ async function loadProducts() {
 window.toggleProductStatus = async function (id, currentStatus) {
     if (!id) return;
     try {
-        await productsCol.doc(id).update({
-            active: !currentStatus
-        });
+        await productsCol.doc(id).update({ active: !currentStatus });
         console.log(`✅ تم تحديث حالة المنتج ${id} إلى ${!currentStatus}`);
-        loadProducts(); // Refresh list
+        await loadProducts();
     } catch (e) {
         console.error("❌ Error toggling product status:", e);
         alert("فشل تحديث حالة المنتج");
@@ -137,10 +135,8 @@ window.deleteProduct = async function (id) {
     if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
     try {
         await productsCol.doc(id).delete();
-        loadProducts();
-    } catch (e) {
-        alert("حدث خطأ أثناء الحذف");
-    }
+        await loadProducts();
+    } catch (e) { alert("حدث خطأ أثناء الحذف"); }
 };
 
 // --- Missing Functions from HTML ---
@@ -149,37 +145,47 @@ const parentSubMap = {
     pants: [{ id: 'jeans', label: 'جينز' }, { id: 'sweatpants', label: 'سويت بانتس' }],
     shoes: []
 };
+
 window.updateSubCats = () => {
-    const pCat = document.getElementById('p-category').value;
+    const pCatSelect = document.getElementById('p-category');
     const subSelect = document.getElementById('p-subcategory');
+    if (!pCatSelect || !subSelect) return;
+    const pCat = pCatSelect.value;
     const subs = parentSubMap[pCat] || [];
     subSelect.innerHTML = '<option value="all">الكل</option>' + subs.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
 };
+
 window.toggleForm = (show = null) => {
     const f = document.getElementById('productForm');
     if (!f) return;
     if (show === null) f.style.display = f.style.display === 'block' ? 'none' : 'block';
     else f.style.display = show ? 'block' : 'none';
 };
+
 window.handleImage = (input) => {
     const file = input.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            document.getElementById('preview-img').src = e.target.result;
-            document.getElementById('p-image-base64').value = e.target.result;
+            const preview = document.getElementById('preview-img');
+            if (preview) preview.src = e.target.result;
+            const hiddenBase64 = document.getElementById('p-image-base64');
+            if (hiddenBase64) hiddenBase64.value = e.target.result;
         };
         reader.readAsDataURL(file);
     }
 };
+
 window.addColorVariant = (data = { name: '', image: '' }) => {
     const container = document.getElementById('color-variants-container');
+    if (!container) return;
     const div = document.createElement('div');
     div.className = 'color-variant-input';
     div.style = "background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px;";
     div.innerHTML = `<input type="text" placeholder="اسم اللون" value="${data.name}" class="v-name"><input type="text" placeholder="رابط الصورة" value="${data.image}" class="v-image"><button type="button" onclick="this.parentElement.remove()" style="background:none; color:#f44336; border:none; cursor:pointer;">حذف</button>`;
     container.appendChild(div);
 };
+
 document.getElementById('saveProductForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-id').value;
@@ -189,9 +195,14 @@ document.getElementById('saveProductForm')?.addEventListener('submit', async (e)
         const img = v.querySelector('.v-image').value;
         if (name) variants.push({ name, image: img });
     });
+
+    const priceInput = document.getElementById('p-price');
+    const priceVal = priceInput ? Number(priceInput.value) : 0;
+    console.log("💰 [Admin] Saving product with price:", priceVal);
+
     const productData = {
         name: document.getElementById('p-name').value,
-        price: Number(document.getElementById('p-price').value),
+        price: priceVal,
         category: document.getElementById('p-category').value,
         subCategory: document.getElementById('p-subcategory').value,
         image: document.getElementById('p-image-base64').value,
@@ -201,54 +212,83 @@ document.getElementById('saveProductForm')?.addEventListener('submit', async (e)
         active: true,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+
     try {
         showLoader(true);
-        if (id) await productsCol.doc(id).update(productData);
-        else await productsCol.add({ ...productData, createdAt: firebase.firestore.FieldValue.serverTimestamp(), active: true });
+        if (id) {
+            await productsCol.doc(id).update(productData);
+        } else {
+            await productsCol.add({ ...productData, createdAt: firebase.firestore.FieldValue.serverTimestamp(), active: true });
+        }
+
+        await loadProducts(); // Force refresh table
         toggleForm(false);
-        loadProducts();
-        alert("تم الحفظ بنجاح!");
-    } catch (err) { alert("خطأ أثناء الحفظ"); } finally { showLoader(false); }
+        setTimeout(() => alert("تم الحفظ بنجاح!"), 100);
+    } catch (err) {
+        console.error("❌ Save Error:", err);
+        alert("خطأ أثناء الحفظ: " + err.message);
+    } finally {
+        showLoader(false);
+    }
 });
+
 window.editProduct = async (id) => {
-    const doc = await productsCol.doc(id).get();
-    const p = doc.data();
-    toggleForm(true);
-    document.getElementById('edit-id').value = id;
-    document.getElementById('p-name').value = p.name;
-    document.getElementById('p-price').value = p.price;
-    document.getElementById('p-category').value = p.category;
-    document.getElementById('p-sizes').value = p.sizes.join(', ');
-    document.getElementById('p-image-base64').value = p.image;
-    document.getElementById('preview-img').src = p.image;
-    document.getElementById('color-variants-container').innerHTML = '';
-    if (p.colorVariants) p.colorVariants.forEach(v => addColorVariant(v));
-    updateSubCats();
+    try {
+        const doc = await productsCol.doc(id).get();
+        if (!doc.exists) return alert("المنتج غير موجود!");
+        const p = doc.data();
+
+        toggleForm(true);
+        document.getElementById('edit-id').value = id;
+        document.getElementById('p-name').value = p.name || '';
+        document.getElementById('p-price').value = p.price || 0;
+        document.getElementById('p-category').value = p.category || 'clothes';
+        document.getElementById('p-sizes').value = p.sizes ? p.sizes.join(', ') : '';
+        document.getElementById('p-image-base64').value = p.image || '';
+
+        const previewEl = document.getElementById('preview-img');
+        if (previewEl) previewEl.src = p.image || '';
+
+        const variantsContainer = document.getElementById('color-variants-container');
+        if (variantsContainer) {
+            variantsContainer.innerHTML = '';
+            if (p.colorVariants) p.colorVariants.forEach(v => addColorVariant(v));
+        }
+
+        updateSubCats();
+        const subCatEl = document.getElementById('p-subcategory');
+        if (subCatEl) subCatEl.value = p.subCategory || 'all';
+    } catch (err) {
+        console.error("❌ Edit Error:", err);
+        alert("حدث خطأ أثناء فتح التعديل");
+    }
 };
 
 async function loadOrders() {
     if (!db) return;
-    const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-    const ordersList = document.getElementById('orders-list');
-    if (!ordersList) return;
+    try {
+        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+        const ordersList = document.getElementById('orders-list');
+        if (!ordersList) return;
 
-    ordersList.innerHTML = snapshot.docs.map(doc => {
-        const o = doc.data();
-        return `
-            <div class="order-card">
-                <h3>طلبية من: ${o.customerName}</h3>
-                <p>الهاتف: ${o.phone}</p>
-                <p>الإجمالي: ${o.total} جنيه</p>
-                <p>الحالة: ${o.status}</p>
-            </div>
-        `;
-    }).join('') || '<p>لا توجد طلبات</p>';
+        ordersList.innerHTML = snapshot.docs.map(doc => {
+            const o = doc.data();
+            return `
+                <div class="order-card">
+                    <h3>طلبية من: ${o.customerName}</h3>
+                    <p>الهاتف: ${o.phone}</p>
+                    <p>الإجمالي: ${o.total} جنيه</p>
+                    <p>الحالة: ${o.status}</p>
+                </div>
+            `;
+        }).join('') || '<p>لا توجد طلبات</p>';
+    } catch (e) { console.error("Load orders error", e); }
 }
 
 async function loadShippingCosts() {
+    if (!db) return;
     const doc = await db.collection('settings').doc('shipping').get();
     const costs = doc.data() || {};
-    // ... rendering for shipping section ...
 }
 
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
@@ -256,22 +296,16 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     const email = document.getElementById('login-email').value;
     const pass = document.getElementById('login-password').value;
 
-    // Passwords for roles
     if (pass === "diesel_prod") adminRole = 'products';
     else if (pass === "diesel_order") adminRole = 'orders';
     else if (pass === "diesel_ship") adminRole = 'shipping';
     else if (pass === "ديزل_كل_حاجة") adminRole = 'all';
-    else {
-        alert("كلمة مرور غير صحيحة!");
-        return;
-    }
+    else { alert("كلمة مرور غير صحيحة!"); return; }
 
     localStorage.setItem('adminRole', adminRole);
     try {
         await firebase.auth().signInWithEmailAndPassword(email, pass);
-    } catch (err) {
-        alert("خطأ في تسجيل الدخول: " + err.message);
-    }
+    } catch (err) { alert("خطأ في تسجيل الدخول: " + err.message); }
 });
 
 document.getElementById('logout-btn')?.addEventListener('click', () => {
