@@ -396,8 +396,11 @@ window.applySubFilter = (parent, subId, btn) => {
 function filterAndRender(section, parent, sub) {
     if (!menContainer) return;
 
-    // 🛡️ STRONGER FILTER: Hide products if active is explicitly false or "false"
-    let filtered = remoteProducts.filter(p => p.active !== false && p.active !== "false");
+    // 🛡️ STRONGER FILTER: Hide products if status is 'hidden' OR active is false
+    let filtered = remoteProducts.filter(p => {
+        const isHidden = p.status === 'hidden' || p.active === false || p.active === "false";
+        return !isHidden;
+    });
 
     if (parent !== 'all') {
         // Support both parentCategory (old) and category (admin)
