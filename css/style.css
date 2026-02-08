@@ -556,46 +556,59 @@ img {
     }
 }
 
-/* UI Global Components (Google Login style) */
+/* UI Global Components (Google Login style - EXACT MATCH) */
 .btn-google-login {
     display: flex !important;
+    flex-direction: row !important;
+    /* In RTL, first child is on the right */
     align-items: center !important;
-    justify-content: center !important;
-    gap: 15px !important;
-    padding: 16px 28px !important;
+    justify-content: space-between !important;
+    padding: 12px 12px 12px 30px !important;
+    /* More padding on the left for the text */
     background: #e20613 !important;
     border: none !important;
     border-radius: 100px !important;
     color: #fff !important;
     font-weight: 800 !important;
-    font-size: 1.15rem !important;
+    font-size: 1.2rem !important;
     cursor: pointer !important;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     width: 100% !important;
-    box-shadow: 0 12px 24px rgba(226, 6, 19, 0.35) !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
+    box-shadow: 0 10px 25px rgba(226, 6, 19, 0.35) !important;
     font-family: 'Cairo', sans-serif !important;
     text-decoration: none !important;
 }
 
 .btn-google-login:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 20px 35px rgba(226, 6, 19, 0.45);
+    transform: scale(1.03);
+    box-shadow: 0 15px 30px rgba(226, 6, 19, 0.45);
 }
 
 .btn-google-login .google-icon-wrapper {
     background: #fff;
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    order: 1;
+    /* Ensures it stays on the right in RTL */
+}
+
+.btn-google-login span {
+    order: 2;
+    /* Text goes to the left of the icon */
+    flex: 1;
+    text-align: center;
 }
 
 .btn-google-login .google-icon-wrapper img {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
 }
 
 /* Collections Grid */
