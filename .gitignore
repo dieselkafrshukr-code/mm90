@@ -10,11 +10,7 @@ Thumbs.db
 node_modules/
 package-lock.json
 
-# Admin Panel Files
-admin.html
-js/admin.js
-diesel-admin-panel/
-diesel-admin-panel.zip
+# Admin Panel Files (Now tracked)
 
 # Deployment files
 deployment/
