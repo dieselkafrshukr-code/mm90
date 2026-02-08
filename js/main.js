@@ -183,7 +183,12 @@ async function loadShippingData() {
     if (db) {
         try {
             const doc = await db.collection('settings').doc('shipping').get();
-            if (doc.exists) shippingCosts = doc.data() || {};
+            if (doc.exists) {
+                const data = doc.data();
+                // The 'costs' field holds the map: { "Cairo": 50, ... }
+                shippingCosts = data.costs || {};
+                console.log("✅ Shipping Costs Loaded:", shippingCosts);
+            }
         } catch (e) { console.error("Error loading shipping costs", e); }
     }
 }
