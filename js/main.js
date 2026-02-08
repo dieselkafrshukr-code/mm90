@@ -43,51 +43,48 @@ const firebaseConfig = {
 let currentUser = null;
 let db = null;
 
+console.log("🔥 بدء تهيئة Firebase...");
+
 try {
     if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        console.log("✅ تم تهيئة Firebase بنجاح!");
+        console.log("📊 Project ID:", firebaseConfig.projectId);
 
         // Auth State Listener
         firebase.auth().onAuthStateChanged(user => {
             currentUser = user;
             if (user) {
+                console.log("👤 مستخدم مسجل:", user.email);
                 const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
                 localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
                 updateAuthUI();
-                // loadCartFromFirebase(); // Removed to prevent errors
             } else {
+                console.log("👤 لا يوجد مستخدم مسجل (وضع الزائر)");
                 localStorage.removeItem('diesel_user_cache');
                 updateAuthUI();
             }
         });
+    } else {
+        console.error("❌ Firebase غير متوفر أو API Key غير صحيح");
     }
 } catch (error) {
-    console.warn("Firebase failed to initialize:", error);
+    console.error("❌ فشل تهيئة Firebase:", error);
 }
 
 
-// Fixed Login Logic - TEMPORARILY DISABLED until Google Provider is enabled in Firebase
+// ✅ Google Login ENABLED (Firebase Provider is active)
 window.signInWithGoogle = async function () {
-    alert("⚠️ تسجيل الدخول بجوجل غير مفعل حالياً\n\nيمكنك التسوق والطلب كزائر بدون تسجيل دخول.\n\nلتفعيل تسجيل الدخول، يرجى:\n1. الدخول إلى Firebase Console\n2. Authentication > Sign-in method\n3. تفعيل Google Provider");
-
-    /* INSTRUCTIONS TO ENABLE GOOGLE LOGIN:
-     * 1. Go to: https://console.firebase.google.com/
-     * 2. Select your project: mre23-4644a
-     * 3. Go to: Authentication > Sign-in method
-     * 4. Click on "Google" and Enable it
-     * 5. Save changes
-     * 
-     * Then uncomment the code below:
-     
+    console.log("🔐 محاولة تسجيل الدخول بجوجل...");
     const provider = new firebase.auth.GoogleAuthProvider();
-    try { 
-        await firebase.auth().signInWithPopup(provider); 
-    } catch (e) { 
-        console.error("Google Login Error:", e); 
-        alert("فشل تسجيل الدخول - تأكد من اتصالك بالإنترنت");
+    try {
+        await firebase.auth().signInWithPopup(provider);
+        console.log("✅ تم تسجيل الدخول بنجاح!");
+    } catch (e) {
+        console.error("❌ Google Login Error:", e);
+        alert("فشل تسجيل الدخول: " + e.message);
     }
-    */
 };
 
 window.signOutUser = async function () {
