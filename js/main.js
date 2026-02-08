@@ -1,4 +1,17 @@
 // 🚀 DIESEL SHOP - INVINCIBLE ENGINE
+// --- IMMEDIATE UI FIX: FORCE REMOVE LOADER AFTER 2 SECONDS ---
+const forceHideLoader = () => {
+    const loaderEl = document.getElementById('loader');
+    if (loaderEl) {
+        loaderEl.style.opacity = '0';
+        setTimeout(() => {
+            loaderEl.style.display = 'none';
+        }, 800);
+    }
+    console.log("🚀 Loader forced hidden");
+};
+setTimeout(forceHideLoader, 2000);
+
 let cart = [];
 try {
     const saved = localStorage.getItem('diesel_cart');
@@ -28,36 +41,41 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let currentUser = null;
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    firebase.initializeApp(firebaseConfig);
-    var db = firebase.firestore();
+let db = null;
 
-    // Force Local Persistence for session stability
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
 
-    // Initial UI check from LocalStorage (for instant feedback before Firebase fires)
-    const cachedUser = localStorage.getItem('diesel_user_cache');
-    if (cachedUser) {
-        try {
-            const data = JSON.parse(cachedUser);
-            // Artificial delay to prevent flicker if Firebase is fast
-            renderAuthUI(data.name);
-        } catch (e) { }
-    }
+        // Force Local Persistence for session stability
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-    // Auth State Listener for Customers
-    firebase.auth().onAuthStateChanged(user => {
-        currentUser = user;
-        if (user) {
-            const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
-            localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
-            updateAuthUI();
-            loadCartFromFirebase();
-        } else {
-            localStorage.removeItem('diesel_user_cache');
-            updateAuthUI();
+        // Initial UI check from LocalStorage (for instant feedback before Firebase fires)
+        const cachedUser = localStorage.getItem('diesel_user_cache');
+        if (cachedUser) {
+            try {
+                const data = JSON.parse(cachedUser);
+                renderAuthUI(data.name);
+            } catch (e) { }
         }
-    });
+
+        // Auth State Listener for Customers
+        firebase.auth().onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
+                localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
+                updateAuthUI();
+                loadCartFromFirebase();
+            } else {
+                localStorage.removeItem('diesel_user_cache');
+                updateAuthUI();
+            }
+        });
+    }
+} catch (error) {
+    console.warn("Firebase failed to initialize:", error);
 }
 
 // Separate rendering from logic for reuse
@@ -84,21 +102,31 @@ function renderAuthUI(name) {
 // DOM Elements
 let menContainer, cartBtn, closeCart, cartSidebar, cartOverlay, loader, navbar, sizeModal, closeModal, modalProductName, modalProductPrice, mobileMenuBtn, navLinks, themeToggle, subFiltersContainer;
 
+const hideLoader = () => {
+    const loaderEl = document.getElementById('loader');
+    if (loaderEl) {
+        loaderEl.style.opacity = '0';
+        setTimeout(() => {
+            loaderEl.style.display = 'none';
+        }, 800);
+    }
+};
+
 const initAll = () => {
     if (window.initialized) return;
     window.initialized = true;
 
-    initElements();
-    initTheme();
-    setupEventListeners();
-    updateCartUI();
-    renderAll();
-
-    if (loader) {
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.style.display = 'none', 800);
-        }, 2200);
+    try {
+        initElements();
+        initTheme();
+        setupEventListeners();
+        updateCartUI();
+        renderAll();
+    } catch (error) {
+        console.error("Initialization error:", error);
+    } finally {
+        // Always try to hide the loader after a short delay
+        setTimeout(hideLoader, 1500);
     }
 };
 
@@ -106,6 +134,9 @@ document.addEventListener('DOMContentLoaded', initAll);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initAll();
 }
+
+// Emergency Fallback: If initAll never runs or hangs, hide loader anyway after 5s
+setTimeout(hideLoader, 5000);
 
 function initElements() {
     menContainer = document.getElementById('men-products');
@@ -133,7 +164,7 @@ async function loadShippingData() {
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
     }
 
-    if (db) {
+    if (typeof db !== 'undefined' && db) {
         try {
             const doc = await db.collection('settings').doc('shipping').get();
             if (doc.exists) shippingCosts = doc.data().costs || {};
@@ -230,13 +261,12 @@ function setupEventListeners() {
 
     if (closeModal) closeModal.onclick = () => sizeModal.classList.remove('active');
 
-    // Checkout Form
+    // Checkout Form - Cash on Delivery Only
     const orderForm = document.getElementById('order-form');
     if (orderForm) {
         orderForm.onsubmit = async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('order-submit-btn');
-            const paymentMethod = orderForm.querySelector('input[name="payment-method"]:checked').value;
 
             submitBtn.disabled = true;
             submitBtn.innerText = "جاري الحفظ...";
@@ -271,7 +301,7 @@ function setupEventListeners() {
                 shippingCost: shippingCost,
                 total: itemsTotal + shippingCost,
                 status: "جديد",
-                paymentMethod: paymentMethod === 'cod' ? 'عند الاستلام' : 'أونلاين',
+                paymentMethod: 'عند الاستلام',
                 paymentStatus: "لم يتم الدفع",
                 userId: currentUser ? currentUser.uid : null,
                 userEmail: currentUser ? currentUser.email : null,
@@ -279,43 +309,10 @@ function setupEventListeners() {
             };
 
             try {
-                // Always save order to Firestore first
-                const docRef = await db.collection('orders').add(orderData);
-                const orderId = docRef.id;
+                // Save order to Firestore
+                await db.collection('orders').add(orderData);
 
-                if (paymentMethod === 'online') {
-                    submitBtn.innerText = "جاري التحويل للدفع...";
-                    // Update this URL to your deployed backend later
-                    const BACKEND_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-backend-url.com';
-
-                    const res = await fetch(`${BACKEND_URL}/pay`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            amount: orderData.total,
-                            orderId: orderId,
-                            customer: {
-                                name: orderData.customerName,
-                                email: orderData.userEmail || "test@test.com",
-                                phone: orderData.phone
-                            },
-                            items: cart.map(i => ({ id: i.id, quantity: i.quantity }))
-                        })
-                    });
-
-                    if (!res.ok) throw new Error("Backend error");
-                    const data = await res.json();
-
-                    // Clear cart before redirecting
-                    cart = [];
-                    updateCartUI();
-                    saveCartToFirebase();
-
-                    window.location.href = data.iframe;
-                    return;
-                }
-
-                // COD Flow
+                // Clear cart and show success
                 cart = [];
                 updateCartUI();
                 saveCartToFirebase();
@@ -326,10 +323,8 @@ function setupEventListeners() {
                 console.error(err);
                 alert("حدث خطأ أثناء معالجة الطلب!");
             } finally {
-                if (paymentMethod !== 'online') {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "تأكيد الطلب الآن ✨";
-                }
+                submitBtn.disabled = false;
+                submitBtn.innerText = "تأكيد الطلب الآن ✨";
             }
         };
     }

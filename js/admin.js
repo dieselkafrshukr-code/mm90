@@ -19,43 +19,55 @@ const governorates = [
 ];
 
 // Initialize Firebase
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    productsCol = db.collection('products');
-    isFirebaseReady = true;
+try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        productsCol = db.collection('products');
+        isFirebaseReady = true;
 
-    // SECURITY: If we came from the home page button, force a logout to ask for credentials again
-    if (sessionStorage.getItem('force_admin_login') === 'true') {
-        sessionStorage.removeItem('force_admin_login');
-        firebase.auth().signOut();
-        localStorage.removeItem('adminRole');
-        adminRole = 'none';
-        console.log("🔒 Security: Fresh login forced from home page.");
-    }
-
-    firebase.auth().onAuthStateChanged(user => {
-        const loginOverlay = document.getElementById('login-overlay');
-        const adminContent = document.getElementById('admin-main-content');
-
-        if (user) {
-            loginOverlay.style.display = 'none';
-            adminContent.style.display = 'block';
-            applyRoleRestrictions();
-
-            if (adminRole === 'products') { showTab('products'); loadProducts(); }
-            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); setupRealtimeNotifications(); }
-            else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
-            else if (adminRole === 'all') { showTab('products'); loadProducts(); loadShippingCosts(); setupRealtimeNotifications(); }
-
-            // Initialize FCM Messaging
-            initMessaging();
-        } else {
-            loginOverlay.style.display = 'flex';
-            adminContent.style.display = 'none';
+        // SECURITY: If we came from the home page button, force a logout to ask for credentials again
+        if (sessionStorage.getItem('force_admin_login') === 'true') {
+            sessionStorage.removeItem('force_admin_login');
+            firebase.auth().signOut();
+            localStorage.removeItem('adminRole');
+            adminRole = 'none';
+            console.log("🔒 Security: Fresh login forced from home page.");
         }
-    });
+
+        firebase.auth().onAuthStateChanged(user => {
+            const loginOverlay = document.getElementById('login-overlay');
+            const adminContent = document.getElementById('admin-main-content');
+
+            if (user) {
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                if (adminContent) adminContent.style.display = 'block';
+                applyRoleRestrictions();
+
+                if (adminRole === 'products') { showTab('products'); loadProducts(); }
+                else if (adminRole === 'orders') { showTab('orders'); loadOrders(); setupRealtimeNotifications(); }
+                else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
+                else if (adminRole === 'all') { showTab('products'); loadProducts(); loadShippingCosts(); setupRealtimeNotifications(); }
+
+                // Initialize FCM Messaging
+                initMessaging();
+            } else {
+                if (loginOverlay) loginOverlay.style.display = 'flex';
+                if (adminContent) adminContent.style.display = 'none';
+            }
+            showLoader(false);
+        });
+    } else {
+        // No firebase, but we should still let the user see something if possible
+        showLoader(false);
+    }
+} catch (error) {
+    console.warn("Firebase failed to initialize in Admin:", error);
+    showLoader(false);
 }
+
+// Emergency Fallback for Global Loader
+setTimeout(() => showLoader(false), 5000);
 
 function initMessaging() {
     if (firebase.messaging.isSupported()) {

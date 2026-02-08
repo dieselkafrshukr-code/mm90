@@ -330,17 +330,13 @@
 
                 <div class="form-group">
                     <label>طريقة الدفع</label>
-                    <div style="display: flex; gap: 10px; margin-top: 5px;">
-                        <label
-                            style="flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; text-align: center;">
-                            <input type="radio" name="payment-method" value="cod" checked style="margin-left: 5px;">
-                            دفع عند الاستلام
-                        </label>
-                        <label
-                            style="flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; text-align: center;">
-                            <input type="radio" name="payment-method" value="online" style="margin-left: 5px;">
-                            دفع أونلاين (كارت)
-                        </label>
+                    <div
+                        style="padding: 15px; background: rgba(226, 6, 19, 0.1); border: 1px solid rgba(226, 6, 19, 0.3); border-radius: 12px; text-align: center;">
+                        <i class="fas fa-money-bill-wave"
+                            style="font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; display: block;"></i>
+                        <strong style="display: block; margin-bottom: 5px;">الدفع عند الاستلام</strong>
+                        <span style="font-size: 0.85rem; opacity: 0.8;">ادفع بكل راحة عند استلام طلبك 💰</span>
+                        <input type="hidden" name="payment-method" value="cod">
                     </div>
                 </div>
 

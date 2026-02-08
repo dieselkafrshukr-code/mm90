@@ -15,3 +15,22 @@ admin.html
 js/admin.js
 diesel-admin-panel/
 diesel-admin-panel.zip
+
+# Deployment files
+deployment/
+*.zip
+
+# Sensitive files (NEVER UPLOAD!)
+serviceAccountKey.json
+.env
+
+# Local scripts
+server.js
+sync_orders.js
+run_sync.bat
+silent_update.vbs
+update_report.bat
+
+# Reports
+*.xlsx
+last_update.txt
