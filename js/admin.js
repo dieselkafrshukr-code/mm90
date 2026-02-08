@@ -1,23 +1,19 @@
-// 🚀 DIESEL ADMIN ENGINE - HYBRID VERSION (Firebase + Local Fallback)
-const firebaseConfig = {
-    apiKey: "AIzaSyBFRqe3lhvzG0FoN0uAJlAP-VEz9bKLjUc",
-    authDomain: "mre23-4644a.firebaseapp.com",
-    projectId: "mre23-4644a",
-    storageBucket: "mre23-4644a.firebasestorage.app",
-    messagingSenderId: "179268769077",
-    appId: "1:179268769077:web:d9fb8cd25ad284ae0de87c"
-};
 
-let db = null;
-let productsCol = null;
-let isFirebaseReady = false;
-let messaging = null; // Add messaging variable
+// 🚀 DIESEL ADMIN ENGINE - HYBRID VERSION (Supabase Edition)
+const SUPABASE_URL = 'https://ymdnfohikgjkvdmdrthe.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_J0JuDItWsSggSZPj0ATwYA_xXlGI92x';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let productsCol = null; // Legacy support (not used directly, Supabase client used instead)
+let isSupabaseReady = true;
 let adminRole = localStorage.getItem('adminRole') || 'none';
+let currentUser = null;
 
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
 ];
 
+<<<<<<< HEAD
 // Initialize Firebase
 try {
     if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -78,28 +74,70 @@ function initMessaging() {
                     db.collection('admin_tokens').doc('primary_admin').set({ token: currentToken, lastUpdated: new Date() });
                 }
             }).catch((err) => console.log('An error occurred while retrieving token. ', err));
+=======
+// Initialize Supabase Auth Logic
+async function initAdminAuth() {
+    // SECURITY: If we came from the home page button, force a logout to ask for credentials again
+    if (sessionStorage.getItem('force_admin_login') === 'true') {
+        sessionStorage.removeItem('force_admin_login');
+        await supabase.auth.signOut();
+        localStorage.removeItem('adminRole');
+        adminRole = 'none';
+        console.log("🔒 Security: Fresh login forced from home page.");
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    handleAdminAuthChange(session);
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+        handleAdminAuthChange(session);
+    });
+}
+
+function handleAdminAuthChange(session) {
+    const loginOverlay = document.getElementById('login-overlay');
+    const adminContent = document.getElementById('admin-main-content');
+
+    if (session?.user) {
+        currentUser = session.user;
+        loginOverlay.style.display = 'none';
+        adminContent.style.display = 'block';
+        applyRoleRestrictions();
+
+        if (adminRole === 'products') { showTab('products'); loadProducts(); }
+        else if (adminRole === 'orders') { showTab('orders'); loadOrders(); setupRealtimeNotifications(); }
+        else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
+        else if (adminRole === 'all') { showTab('products'); loadProducts(); loadShippingCosts(); setupRealtimeNotifications(); }
+    } else {
+        loginOverlay.style.display = 'flex';
+        adminContent.style.display = 'none';
+>>>>>>> 5cb586738da5a7ff01dbf173bc7c8ecbf5fb5250
     }
 }
 
 function setupRealtimeNotifications() {
-    if (!db) return;
+    if (!isSupabaseReady) return;
 
     // Request permission for browser notifications
     if (Notification.permission !== "granted") {
         Notification.requestPermission();
     }
 
-    // Listen to new orders
-    db.collection('orders')
-        .where('createdAt', '>', new Date()) // Only new orders since opening dashboard
-        .onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === "added") {
-                    const order = change.doc.data();
-                    showOrderPushNotification(order);
+    // Listen to new orders using Supabase Realtime
+    const channel = supabase.channel('orders_channel')
+        .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'orders' },
+            (payload) => {
+                const order = payload.new;
+                showOrderPushNotification(order);
+                // Also refresh list if on orders tab
+                if (adminRole === 'orders' || adminRole === 'all') {
+                    loadOrders();
                 }
-            });
-        });
+            }
+        )
+        .subscribe();
 }
 
 function showOrderPushNotification(order) {
@@ -110,7 +148,6 @@ function showOrderPushNotification(order) {
         });
         n.onclick = () => { window.focus(); showTab('orders'); };
 
-        // Also play a sound if possible
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         audio.play().catch(e => console.log("Sound blocked by browser"));
     }
@@ -119,7 +156,7 @@ function showOrderPushNotification(order) {
 // Global Elements
 let productsListBody, subCatSelect, previewImg, globalLoader, colorVariantsContainer;
 let colorVariants = [];
-let remoteProducts = []; // Declare the missing variable 
+let remoteProducts = [];
 
 const subMap = {
     clothes: [
@@ -150,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSubCats();
 
+    initAdminAuth();
+
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
@@ -169,15 +208,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Standard Firebase Login
-                await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
-                await firebase.auth().signInWithEmailAndPassword(email, pass);
+                // Supabase Login
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: pass,
+                });
+
+                if (error) {
+                    // Fallback: If user doesn't exist in Supabase Auth yet (since we just migrated), 
+                    // we might need to create them or handle this differently.
+                    // For now, let's treat the password check above as the "Auth" for the legacy style,
+                    // but we still need a valid session to write to DB if RLS is on.
+                    // If you haven't created these users in Supabase Auth, sign up first.
+
+                    // Attempt auto-signup if failed (only for migration convenience, remove in prod!)
+                    // In real world, you create users in dashboard.
+                    console.warn("Login failed, attempting fallback or reporting error:", error);
+                    errEl.innerText = "فشل الدخول. تأكد من وجود المستخدم في Supabase Authentication";
+                    errEl.style.display = 'block';
+                    return;
+                }
 
                 localStorage.setItem('adminRole', role);
                 adminRole = role;
                 applyRoleRestrictions();
 
-                // Explicitly show the correct tab after login
                 if (role === 'products') { showTab('products'); }
                 else if (role === 'orders') { showTab('orders'); }
                 else if (role === 'all') { showTab('products'); }
@@ -189,16 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
-    // TRIGGER INITIAL LOAD IF ALREADY AUTHENTICATED
-    if (firebase.auth().currentUser) {
-        // Give it a tiny delay to ensure everything is ready
-        setTimeout(() => {
-            if (adminRole === 'products' || adminRole === 'all') { showTab('products'); loadProducts(); }
-            else if (adminRole === 'orders') { showTab('orders'); loadOrders(); }
-            else if (adminRole === 'shipping') { showTab('shipping'); loadShippingCosts(); }
-        }, 500);
-    }
 });
 
 async function loadShippingCosts() {
@@ -208,8 +253,8 @@ async function loadShippingCosts() {
     showLoader(true);
     let currentCosts = {};
     try {
-        const doc = await db.collection('settings').doc('shipping').get();
-        if (doc.exists) currentCosts = doc.data().costs || {};
+        const { data, error } = await supabase.from('settings').select('costs').eq('id', 'shipping').single();
+        if (data) currentCosts = data.costs || {};
     } catch (e) { console.error(e); }
 
     container.innerHTML = governorates.map(gov => `
@@ -233,7 +278,8 @@ async function saveShippingCosts() {
 
     showLoader(true);
     try {
-        await db.collection('settings').doc('shipping').set({ costs, updatedAt: new Date().toISOString() });
+        const { error } = await supabase.from('settings').upsert({ id: 'shipping', costs: costs, updatedAt: new Date() });
+        if (error) throw error;
         alert("تم حفظ تكاليف الشحن بنجاح! 🚚✅");
     } catch (e) {
         console.error("Save error:", e);
@@ -243,7 +289,7 @@ async function saveShippingCosts() {
 }
 
 function logout() {
-    firebase.auth().signOut();
+    supabase.auth.signOut();
     localStorage.removeItem('adminRole');
     adminRole = 'none';
 }
@@ -278,9 +324,7 @@ function applyRoleRestrictions() {
 }
 
 function showTab(tab) {
-    // Strict Role Check - Allow if role exists
     if (!adminRole || adminRole === 'none') {
-        // Try reading again from storage in case of race condition
         adminRole = localStorage.getItem('adminRole') || 'none';
     }
 
@@ -373,7 +417,6 @@ async function handleVariantImage(input, id) {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const base64 = e.target.result;
-            // Variants can be smaller to save space (800px is plenty)
             const compressed = await compressImage(base64, 800);
             const v = colorVariants.find(v => v.id === id);
             if (v) {
@@ -407,7 +450,6 @@ async function compressImage(base64, maxWidth = 1200) {
             ctx.imageSmoothingQuality = 'high';
 
             ctx.drawImage(img, 0, 0, width, height);
-            // Quality 0.7 - 0.8 is best for Firestore size/quality balance
             resolve(canvas.toDataURL('image/jpeg', 0.75));
         };
     });
@@ -475,27 +517,40 @@ if (saveProductForm) {
             data.status = 'active';
         }
 
-        // SANITIZE DATA
-        const finalData = sanitizeFirestoreData(data);
-
         try {
-            // Check Document Size (Firestore Limit: 1MB)
-            const stringData = JSON.stringify(finalData);
+            // Supabase Size Limit Check (Edge case but good practice)
+            const stringData = JSON.stringify(data);
             const sizeInBytes = new Blob([stringData]).size;
-            if (isFirebaseReady && sizeInBytes > 1000000) {
+            if (sizeInBytes > 1000 * 1000) {
                 showLoader(false);
                 return alert("⚠️ حجم المنتج كبير جداً بسبب كثرة الصور عالية الجودة. يرجى تقليل عدد الألوان أو استخدام صور أصغر.");
             }
 
-            if (isFirebaseReady) {
-                if (id) await productsCol.doc(id).update(finalData);
-                else { finalData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await productsCol.add(finalData); }
-            } else {
-                let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
-                if (id) { const idx = localProds.findIndex(p => p.id == id); if (idx !== -1) { if (!finalData.image) finalData.image = localProds[idx].image; localProds[idx] = { ...localProds[idx], ...finalData }; } }
-                else { finalData.id = 'L' + Date.now(); finalData.createdAt = new Date().toISOString(); localProds.push(finalData); }
-                localStorage.setItem('diesel_products', JSON.stringify(localProds));
+            if (isSupabaseReady) {
+                if (id && !id.startsWith('L')) {
+                    // Update existing
+                    const { error } = await supabase.from('products').update(data).eq('id', id);
+                    if (error) throw error;
+                } else {
+                    // Create new
+                    // Remove id if it's new, Supabase generates it
+                    const { error } = await supabase.from('products').insert([data]);
+                    if (error) throw error;
+                }
             }
+            // Update Local Backup just in case
+            let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
+            if (id) {
+                const idx = localProds.findIndex(p => p.id == id);
+                if (idx !== -1) {
+                    // Merge updates
+                    localProds[idx] = { ...localProds[idx], ...data };
+                }
+            } else {
+                localProds.push({ ...data, id: 'L' + Date.now() }); // Temporary local ID
+            }
+            localStorage.setItem('diesel_products', JSON.stringify(localProds));
+
             alert("تم الحفظ بنجاح! ✅"); toggleForm(); loadProducts();
         } catch (err) { console.error(err); alert("حدث خطأ! ❌\n" + (err.message || err)); }
         showLoader(false);
@@ -505,51 +560,47 @@ if (saveProductForm) {
 async function fetchProducts() {
     let allP = [];
 
-    // 1. Load Local Products (Backup/Manual)
+    // 1. Load Local (Immediate Feedback)
     try {
         const local = JSON.parse(localStorage.getItem('diesel_products') || '[]');
         allP = [...local];
-    } catch (e) { console.error("Local load error", e); }
+    } catch (e) { console.error("Local error", e); }
 
-    // 2. Load Firebase Products (Live)
-    if (isFirebaseReady && db) {
+    // 2. Load Remote Supabase
+    if (isSupabaseReady) {
         try {
-            const snapshot = await db.collection('products').get();
-            const remote = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log(`Fetched ${remote.length} products from Firebase`);
-
-            // Merge: Remote products overwrite local if IDs match, otherwise add
-            remote.forEach(rp => {
-                const idx = allP.findIndex(lp => lp.id === rp.id);
-                if (idx !== -1) allP[idx] = rp;
-                else allP.push(rp);
-            });
+            const { data, error } = await supabase.from('products').select('*');
+            if (data) {
+                // Merge logic could be improved, but simply taking remote is safer to avoid sync conflicts
+                // If remote exists, prioritize it.
+                if (data.length > 0) allP = data;
+                else if (allP.length > 0) {
+                    // If remote is empty but local has data (first migration?), maybe keep local
+                    // But usually remote is source of truth.
+                }
+            }
         } catch (error) {
-            console.error("Firebase fetch error:", error);
+            console.error("Supabase fetch error:", error);
         }
     }
 
-    // 3. Fallback to hardcoded products if everything is empty
+    // 3. Fallback
     if (allP.length === 0 && typeof products !== 'undefined' && products.length > 0) {
-        console.log("Using fallback products data");
         allP = products;
     }
 
-    console.log(`Total products loaded: ${allP.length}`);
     remoteProducts = allP;
     return allP;
 }
 
 async function loadProducts() {
-    // Safety check for UI elements
     if (!productsListBody) productsListBody = document.getElementById('products-list-body');
-    if (!productsListBody) return; // Still not ready
+    if (!productsListBody) return;
 
     if (adminRole !== 'all' && adminRole !== 'products') return;
     try {
-        let allProducts = await fetchProducts(); // Use the new fetchProducts function
+        let allProducts = await fetchProducts();
 
-        // Ensure unique products after merging
         const uniqueProds = Array.from(new Map(allProducts.map(item => [item.id, item])).values());
         uniqueProds.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 
@@ -598,16 +649,15 @@ async function toggleVisibility(id, currentlyHidden) {
     showLoader(true);
     const newStatus = currentlyHidden ? 'active' : 'hidden';
     try {
-        if (isFirebaseReady && !id.startsWith('L')) {
-            await productsCol.doc(id).update({ status: newStatus, updatedAt: new Date().toISOString() });
+        if (isSupabaseReady && !id.startsWith('L')) {
+            await supabase.from('products').update({ status: newStatus, updatedAt: new Date() }).eq('id', id);
         }
 
-        // Update local if exists
+        // Local Update
         let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
         const idx = localProds.findIndex(p => p.id == id);
         if (idx !== -1) {
             localProds[idx].status = newStatus;
-            localProds[idx].updatedAt = new Date().toISOString();
             localStorage.setItem('diesel_products', JSON.stringify(localProds));
         }
 
@@ -619,13 +669,15 @@ async function toggleVisibility(id, currentlyHidden) {
 }
 
 async function deleteProduct(id) {
-    if (!confirm("⚠️ هذا سيحذف المنتج تماماً ولن تتمكن من استعادته. هل أنت متأكد؟ (يفضل استخدام الإخفاء بدلاً من الحذف)")) return;
+    if (!confirm("⚠️ هذا سيحذف المنتج تماماً ولن تتمكن من استعادته. هل أنت متأكد؟")) return;
     showLoader(true);
     try {
-        if (isFirebaseReady && !id.startsWith('L')) await productsCol.doc(id).delete();
+        if (isSupabaseReady && !id.startsWith('L')) await supabase.from('products').delete().eq('id', id);
+
         let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
         localProds = localProds.filter(p => p.id != id);
         localStorage.setItem('diesel_products', JSON.stringify(localProds));
+
         loadProducts();
     } catch (err) { alert("فشل الحذف!"); }
     showLoader(false);
@@ -633,17 +685,45 @@ async function deleteProduct(id) {
 
 async function editProduct(id) {
     let p = null;
-    if (isFirebaseReady && !id.startsWith('L')) { const doc = await productsCol.doc(id).get(); p = doc.data(); }
-    else { const localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]'); p = localProds.find(item => item.id == id); }
+    if (isSupabaseReady && !id.startsWith('L')) {
+        const { data } = await supabase.from('products').select('*').eq('id', id).single();
+        p = data;
+    } else {
+        const localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
+        p = localProds.find(item => item.id == id);
+    }
+
     if (!p) return;
+
     document.getElementById('edit-id').value = id;
     document.getElementById('p-name').value = p.name;
     document.getElementById('p-price').value = p.price;
     document.getElementById('p-category').value = p.parentCategory || 'clothes';
     updateSubCats();
     document.getElementById('p-subcategory').value = p.subCategory;
-    document.getElementById('p-sizes').value = (p.sizes || []).join(', ');
-    colorVariants = (p.colorVariants || (p.colors || []).map(c => ({ name: c, image: '', sizes: '' }))).map(v => ({ ...v, id: Math.random(), sizes: Array.isArray(v.sizes) ? v.sizes.join(', ') : (v.sizes || '') }));
+
+    // Handle sizes if array or string
+    let sizesStr = '';
+    if (Array.isArray(p.sizes)) sizesStr = p.sizes.join(', ');
+    else if (typeof p.sizes === 'string') sizesStr = p.sizes;
+    document.getElementById('p-sizes').value = sizesStr;
+
+    // Handle Color Variants
+    let rawVariants = p.colorVariants;
+    // Map existing structure or fallback to simple colors array
+    let mappedVariants = [];
+    if (rawVariants && Array.isArray(rawVariants)) {
+        mappedVariants = rawVariants.map(v => ({
+            id: Math.random(),
+            name: v.name,
+            image: v.image,
+            sizes: Array.isArray(v.sizes) ? v.sizes.join(', ') : (v.sizes || '')
+        }));
+    } else if (p.colors && Array.isArray(p.colors)) {
+        mappedVariants = p.colors.map(c => ({ id: Math.random(), name: c, image: '', sizes: '' }));
+    }
+
+    colorVariants = mappedVariants;
     renderColorVariants();
     document.getElementById('p-badge').value = p.badge || '';
     document.getElementById('p-image-base64').value = p.image || "";
@@ -654,12 +734,16 @@ async function editProduct(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Other management
 async function clearAllProducts() {
     if (!confirm("⚠️ تحذير: سيتم حذف جميع المنتجات نهائياً من المتجر والداتابيز. هل أنت متأكد؟")) return;
     showLoader(true);
     try {
-        if (isFirebaseReady) { const snapshot = await productsCol.get(); const batch = db.batch(); snapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
+        // Supabase doesn't have "truncate" via client easily without policy, loop delete is slow.
+        // But for client app usually we delete one by one or batch if small.
+        // Assuming moderate size, we issue a delete for all (CAREFUL in prod)
+        if (isSupabaseReady) {
+            const { error } = await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete not null trick
+        }
         localStorage.removeItem('diesel_products');
         alert("تم تفريغ المتجر بنجاح! 🗑️"); loadProducts();
     } catch (err) { alert("حدث خطأ أثناء الحذف!"); }
@@ -672,10 +756,35 @@ async function resetStore() {
     const script = document.createElement('script');
     script.src = './js/products.js';
     script.onload = async () => {
-        let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
         if (typeof products === 'undefined' || products.length === 0) { alert("لا توجد منتجات افتراضية للاستيراد."); showLoader(false); return; }
-        for (const p of products) { if (!localProds.some(lp => lp.name === p.name)) { const newP = { ...p, id: 'L' + Date.now() + Math.random(), parentCategory: p.subCategory === 'shoes' ? 'shoes' : (p.subCategory === 'jeans' || p.subCategory === 'sweatpants' ? 'pants' : 'clothes'), updatedAt: new Date().toISOString() }; localProds.push(newP); if (isFirebaseReady) { try { await productsCol.add(newP); } catch (e) { } } } }
-        localStorage.setItem('diesel_products', JSON.stringify(localProds));
+
+        let toInsert = [];
+        for (const p of products) {
+            const newP = {
+                name: p.name,
+                price: p.price,
+                image: p.image,
+                category: "men",
+                parentCategory: p.subCategory === 'shoes' ? 'shoes' : (p.subCategory === 'jeans' || p.subCategory === 'sweatpants' ? 'pants' : 'clothes'),
+                subCategory: p.subCategory,
+                sizes: p.sizes, // array
+                colors: p.colors || [],
+                colorVariants: p.colorVariants, // json
+                badge: p.badge || "",
+                updatedAt: new Date().toISOString()
+            };
+            toInsert.push(newP);
+        }
+
+        if (isSupabaseReady && toInsert.length > 0) {
+            try {
+                const { error } = await supabase.from('products').insert(toInsert);
+                if (error) throw error;
+            } catch (e) {
+                console.error("Batch insert failed", e);
+            }
+        }
+
         alert("تم الاستيراد بنجاح!"); loadProducts(); showLoader(false);
     };
     document.body.appendChild(script);
@@ -685,129 +794,158 @@ function showLoader(show) { if (globalLoader) globalLoader.style.display = show 
 
 // Order functions
 async function loadOrders() {
-    if (!isFirebaseReady) return;
+    if (!isSupabaseReady) return;
     if (adminRole !== 'all' && adminRole !== 'orders') return;
+
     const ordersList = document.getElementById('orders-list');
-    if (!ordersList) return; // UI not ready yet
-    db.collection('orders').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-        let html = ''; let newCount = 0;
-        if (snapshot.empty) { ordersList.innerHTML = '<div style="text-align: center; padding: 50px; opacity: 0.5;">لا توجد طلبات بعد.</div>'; return; }
-        snapshot.forEach(doc => {
-            const order = doc.data(); const id = doc.id; const date = order.createdAt ? order.createdAt.toDate().toLocaleString('ar-EG') : 'قيد المعالجة...';
-            if (order.status === 'جديد') newCount++;
-            html += `<div class="order-card">
-                        <div class="order-header">
-                            <div>
-                                <h3>${order.customerName}</h3>
-                                <p style="font-size: 0.9rem; opacity: 0.7;"><i class="fas fa-clock"></i> ${date}</p>
-                            </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                                <span class="order-status status-${getStatusClass(order.status)}">${order.status}</span>
-                                <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px;">
-                                    ${order.paymentMethod || 'دفع عند الاستلام'}
-                                </span>
-                                <span style="font-size: 0.75rem; font-weight: bold; color: ${order.paymentStatus === 'تم الدفع' ? '#4CAF50' : '#f44336'}">
-                                    <i class="fas ${order.paymentStatus === 'تم الدفع' ? 'fa-check-circle' : 'fa-hourglass-start'}"></i> ${order.paymentStatus || 'لم يتم الدفع'}
-                                </span>
-                            </div>
+    if (!ordersList) return;
+
+    // Load from Supabase
+    const { data: orders, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+    if (!orders || orders.length === 0) {
+        ordersList.innerHTML = '<div style="text-align: center; padding: 50px; opacity: 0.5;">لا توجد طلبات بعد.</div>';
+        return;
+    }
+
+    let html = '';
+    let newCount = 0;
+
+    orders.forEach(order => {
+        const id = order.id;
+        const date = order.createdAt ? new Date(order.createdAt).toLocaleString('ar-EG') : 'غير متوفر';
+        if (order.status === 'جديد') newCount++;
+
+        // Handle items: Supabase JSONB returns object directly, no need to parse if client handles it well
+        let items = order.items;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) { }
+        }
+        if (!Array.isArray(items)) items = [];
+
+        html += `<div class="order-card">
+                    <div class="order-header">
+                        <div>
+                            <h3>${order.customerName}</h3>
+                            <p style="font-size: 0.9rem; opacity: 0.7;"><i class="fas fa-clock"></i> ${date}</p>
                         </div>
-                        <div style="font-size: 1rem; margin-bottom: 10px;">
-                            <p><i class="fas fa-phone"></i> <strong>الهاتف:</strong> <a href="tel:${order.phone}" style="color:var(--accent)">${order.phone}</a></p>
-                            <p><i class="fas fa-map-marker-alt"></i> <strong>المحافظة:</strong> ${order.gov || 'غير محدد'}</p>
-                            <p><i class="fas fa-map-marker"></i> <strong>العنوان:</strong> ${order.address}</p>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                            <span class="order-status status-${getStatusClass(order.status)}">${order.status}</span>
+                            <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px;">
+                                ${order.paymentMethod || 'دفع عند الاستلام'}
+                            </span>
+                            <span style="font-size: 0.75rem; font-weight: bold; color: ${order.paymentStatus === 'تم الدفع' ? '#4CAF50' : '#f44336'}">
+                                <i class="fas ${order.paymentStatus === 'تم الدفع' ? 'fa-check-circle' : 'fa-hourglass-start'}"></i> ${order.paymentStatus || 'لم يتم الدفع'}
+                            </span>
                         </div>
-                        <div class="order-items">${order.items.map(item => `<div class="order-item"><span>${item.name} (${item.color} - ${item.size}) x${item.quantity}</span><span style="font-weight: bold;">${item.total} ج.م</span></div>`).join('')}</div>
-                        <div class="order-footer">
-                            <div style="font-size: 1rem; opacity: 0.8; margin-bottom: 5px;">
-                                <div style="display:flex; justify-content:space-between;"><span>إجمالي المنتجات:</span><span>${order.itemsTotal || (order.total - (order.shippingCost || 0))} ج.م</span></div>
-                                <div style="display:flex; justify-content:space-between;"><span>مصاريف الشحن:</span><span>${order.shippingCost || 0} ج.م</span></div>
-                            </div>
-                            <div style="font-size: 1.3rem; font-weight: 900; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 5px;">الاجمالي النهائي: <span style="color:var(--accent)">${order.total} ج.م</span></div>
-                            <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                <select onchange="updateOrderStatus('${id}', this.value)" class="btn-status">
-                                    <option value="جديد" ${order.status === 'جديد' ? 'selected' : ''}>جديد</option>
-                                    <option value="جاري التجهيز" ${order.status === 'جاري التجهيز' ? 'selected' : ''}>جاري التجهيز</option>
-                                    <option value="تم الشحن" ${order.status === 'تم الشحن' ? 'selected' : ''}>تم الشحن</option>
-                                    <option value="تم التسليم" ${order.status === 'تم التسليم' ? 'selected' : ''}>تم التسليم</option>
-                                    <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
-                                </select>
-                                <button onclick="deleteOrder('${id}')" class="btn-status" style="background:#f44336; border-color:#f44336;"><i class="fas fa-trash"></i></button>
-                            </div>
+                    </div>
+                    <div style="font-size: 1rem; margin-bottom: 10px;">
+                        <p><i class="fas fa-phone"></i> <strong>الهاتف:</strong> <a href="tel:${order.phone}" style="color:var(--accent)">${order.phone}</a></p>
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>المحافظة:</strong> ${order.gov || 'غير محدد'}</p>
+                        <p><i class="fas fa-map-marker"></i> <strong>العنوان:</strong> ${order.address}</p>
+                    </div>
+                    <div class="order-items">${items.map(item => `<div class="order-item"><span>${item.name} (${item.color} - ${item.size}) x${item.quantity}</span><span style="font-weight: bold;">${item.total} ج.م</span></div>`).join('')}</div>
+                    <div class="order-footer">
+                        <div style="font-size: 1rem; opacity: 0.8; margin-bottom: 5px;">
+                            <div style="display:flex; justify-content:space-between;"><span>إجمالي المنتجات:</span><span>${order.itemsTotal || (order.total - (order.shippingCost || 0))} ج.م</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span>مصاريف الشحن:</span><span>${order.shippingCost || 0} ج.م</span></div>
                         </div>
-                    </div>`;
-        });
-        ordersList.innerHTML = html;
-        const badge = document.getElementById('new-orders-count');
-        if (newCount > 0) { badge.innerText = newCount; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+                        <div style="font-size: 1.3rem; font-weight: 900; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 5px;">الاجمالي النهائي: <span style="color:var(--accent)">${order.total} ج.م</span></div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <select onchange="updateOrderStatus('${id}', this.value)" class="btn-status">
+                                <option value="جديد" ${order.status === 'جديد' ? 'selected' : ''}>جديد</option>
+                                <option value="جاري التجهيز" ${order.status === 'جاري التجهيز' ? 'selected' : ''}>جاري التجهيز</option>
+                                <option value="تم الشحن" ${order.status === 'تم الشحن' ? 'selected' : ''}>تم الشحن</option>
+                                <option value="تم التسليم" ${order.status === 'تم التسليم' ? 'selected' : ''}>تم التسليم</option>
+                                <option value="ملغي" ${order.status === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                            </select>
+                            <button onclick="deleteOrder('${id}')" class="btn-status" style="background:#f44336; border-color:#f44336;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
     });
+
+    ordersList.innerHTML = html;
+    const badge = document.getElementById('new-orders-count');
+    if (newCount > 0) { badge.innerText = newCount; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
 }
 
 function getStatusClass(status) { return status === 'جديد' ? 'new' : status === 'جاري التجهيز' ? 'preparing' : status === 'تم الشحن' ? 'shipped' : status === 'تم التسليم' ? 'delivered' : 'default'; }
-async function updateOrderStatus(id, newStatus) { try { await db.collection('orders').doc(id).update({ status: newStatus }); alert("تم تحديث حالة الطلب ✅"); } catch (err) { alert("خطأ في التحديث!"); } }
-async function deleteOrder(id) { if (!isFirebaseReady) return; if (!confirm("هل تريد حذف هذا الطلب؟")) return; try { await db.collection('orders').doc(id).delete(); alert("تم حذف الطلب 🗑️"); } catch (err) { alert("خطأ في الحذف!"); } }
+async function updateOrderStatus(id, newStatus) {
+    try {
+        await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+        alert("تم تحديث حالة الطلب ✅");
+        loadOrders();
+    } catch (err) { alert("خطأ في التحديث!"); }
+}
+async function deleteOrder(id) {
+    if (!isSupabaseReady) return;
+    if (!confirm("هل تريد حذف هذا الطلب؟")) return;
+    try {
+        await supabase.from('orders').delete().eq('id', id);
+        alert("تم حذف الطلب 🗑️");
+        loadOrders();
+    } catch (err) { alert("خطأ في الحذف!"); }
+}
 
 async function deleteAllOrders() {
-    if (!isFirebaseReady) return;
+    if (!isSupabaseReady) return;
     if (!confirm("⚠️ هل أنت متأكد من حذف كافة الطلبات؟")) return;
     const finalPass = prompt("اكتب 'ديزل' لإتمام الحذف:");
     if (finalPass !== "ديزل") return;
     showLoader(true);
     try {
-        const snapshot = await db.collection('orders').get();
-        const batch = db.batch();
-        snapshot.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
+        const { error } = await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         alert("تم مسح جميع الطلبات بنجاح 🗑️");
+        loadOrders();
     } catch (err) { alert("حدث خطأ!"); }
     showLoader(false);
 }
 
 async function exportOrders() {
-    if (!isFirebaseReady) return;
+    if (!isSupabaseReady) return;
     showLoader(true);
     try {
-        const snapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
-        if (snapshot.empty) { alert("لا توجد طلبات."); showLoader(false); return; }
-        const allOrders = []; const todayOrders = [];
-        const stats = { revenue: 0, todayRevenue: 0 };
-        const now = new Date(); const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        snapshot.forEach(doc => {
-            const o = doc.data(); const createdAt = o.createdAt ? o.createdAt.toDate() : null;
+        const { data: snapshot } = await supabase.from('orders').select('*').order('createdAt', { ascending: false });
+        if (!snapshot || snapshot.length === 0) { alert("لا توجد طلبات."); showLoader(false); return; }
+
+        const allOrders = [];
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        snapshot.forEach(o => {
+            const createdAt = o.createdAt ? new Date(o.createdAt) : null;
+
+            let itemsStr = '';
+            let items = o.items;
+            if (typeof items === 'string') { try { items = JSON.parse(items); } catch (e) { } }
+            if (Array.isArray(items)) {
+                itemsStr = items.map(i => `${i.name} (${i.color}/${i.size}) x${i.quantity}`).join(' | ');
+            }
+
             const row = {
                 "التاريخ": createdAt ? createdAt.toLocaleString('ar-EG') : 'قيد المعالجة',
                 "اسم العميل": o.customerName,
                 "رقم الهاتف": o.phone,
                 "المحافظة": o.gov || 'غير محدد',
                 "العنوان": o.address,
-                "المنتجات": o.items.map(i => `${i.name} (${i.color}/${i.size}) x${i.quantity}`).join(' | '),
+                "المنتجات": itemsStr,
                 "إجمالي المنتجات": (o.itemsTotal || (o.total - (o.shippingCost || 0))) + " ج.م",
                 "مصاريف الشحن": (o.shippingCost || 0) + " ج.م",
                 "الإجمالي النهائي": o.total + " ج.م",
                 "الحالة": o.status,
                 "حالة الدفع": o.paymentStatus || 'كاش/عند الاستلام'
             };
-            allOrders.push(row); stats.revenue += Number(o.total || 0);
-            if (createdAt && createdAt >= startOfToday) { todayOrders.push(row); stats.todayRevenue += Number(o.total || 0); }
+            allOrders.push(row);
         });
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(allOrders), "كافة الطلبات");
         XLSX.writeFile(workbook, `Diesel_Report_${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.xlsx`);
         alert("تم التصدير بنجاح!");
-    } catch (err) { alert("خطأ في التصدير!"); }
+    } catch (err) { console.error(err); alert("خطأ في التصدير!"); }
     showLoader(false);
-}
-
-function sanitizeFirestoreData(obj) {
-    if (obj === undefined) return undefined;
-    if (obj === null) return null;
-    if (Array.isArray(obj)) return obj.map(v => sanitizeFirestoreData(v)).filter(v => v !== undefined);
-    if (typeof obj === 'object') {
-        const newObj = {};
-        for (const key in obj) {
-            const val = sanitizeFirestoreData(obj[key]);
-            if (val !== undefined) newObj[key] = val;
-        }
-        return newObj;
-    }
-    return obj;
 }
