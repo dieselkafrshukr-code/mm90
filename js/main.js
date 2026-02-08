@@ -1,4 +1,5 @@
-// 🚀 DIESEL SHOP - INVINCIBLE ENGINE
+
+// 🚀 DIESEL SHOP - INVINCIBLE ENGINE (Supabase Edition)
 let cart = [];
 try {
     const saved = localStorage.getItem('diesel_cart');
@@ -10,54 +11,45 @@ try {
 let selectedProductForSize = null;
 let selectedColor = null;
 let activeCategory = "all";
-let remoteProducts = []; // To store products from Firebase
+let remoteProducts = []; 
 let shippingCosts = {};
 const governorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "الشرقية", "دمياط", "بورسعيد", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج", "بني سويف", "أسيوط", "أسوان"
 ];
 
-// Firebase Config
-const firebaseConfig = {
-    apiKey: "AIzaSyBFRqe3lhvzG0FoN0uAJlAP-VEz9bKLjUc",
-    authDomain: "mre23-4644a.firebaseapp.com",
-    projectId: "mre23-4644a",
-    storageBucket: "mre23-4644a.firebasestorage.app",
-    messagingSenderId: "179268769077",
-    appId: "1:179268769077:web:d9fb8cd25ad284ae0de87c"
-};
+// Supabase Config
+const SUPABASE_URL = 'https://ymdnfohikgjkvdmdrthe.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_J0JuDItWsSggSZPj0ATwYA_xXlGI92x';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Initialize Firebase
 let currentUser = null;
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    firebase.initializeApp(firebaseConfig);
-    var db = firebase.firestore();
 
-    // Force Local Persistence for session stability
-    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+// Initialize & Auth Listener
+async function initSupabaseAuth() {
+    // Check current session
+    const { data: { session } } = await supabase.auth.getSession();
+    handleAuthChange(session);
 
-    // Initial UI check from LocalStorage (for instant feedback before Firebase fires)
-    const cachedUser = localStorage.getItem('diesel_user_cache');
-    if (cachedUser) {
-        try {
-            const data = JSON.parse(cachedUser);
-            // Artificial delay to prevent flicker if Firebase is fast
-            renderAuthUI(data.name);
-        } catch (e) { }
-    }
-
-    // Auth State Listener for Customers
-    firebase.auth().onAuthStateChanged(user => {
-        currentUser = user;
-        if (user) {
-            const name = user.displayName ? user.displayName.split(' ')[0] : 'حسابي';
-            localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
-            updateAuthUI();
-            loadCartFromFirebase();
-        } else {
-            localStorage.removeItem('diesel_user_cache');
-            updateAuthUI();
-        }
+    // Listen for changes
+    supabase.auth.onAuthStateChange((_event, session) => {
+        handleAuthChange(session);
     });
+}
+
+function handleAuthChange(session) {
+    if (session?.user) {
+        currentUser = session.user;
+        const name = currentUser.user_metadata.full_name ? currentUser.user_metadata.full_name.split(' ')[0] : 'حسابي';
+        localStorage.setItem('diesel_user_cache', JSON.stringify({ name }));
+        updateAuthUI();
+        loadCartFromSupabase();
+    } else {
+        currentUser = null;
+        if (localStorage.getItem('diesel_user_cache')) {
+            localStorage.removeItem('diesel_user_cache');
+        }
+        updateAuthUI();
+    }
 }
 
 // Separate rendering from logic for reuse
@@ -93,6 +85,7 @@ const initAll = () => {
     setupEventListeners();
     updateCartUI();
     renderAll();
+    initSupabaseAuth(); // Start Auth
 
     if (loader) {
         setTimeout(() => {
@@ -133,12 +126,10 @@ async function loadShippingData() {
             governorates.sort().map(g => `<option value="${g}" style="background: #111; color: #fff;">${g}</option>`).join('');
     }
 
-    if (db) {
-        try {
-            const doc = await db.collection('settings').doc('shipping').get();
-            if (doc.exists) shippingCosts = doc.data().costs || {};
-        } catch (e) { console.error("Error loading shipping costs", e); }
-    }
+    try {
+        const { data, error } = await supabase.from('settings').select('costs').eq('id', 'shipping').single();
+        if (data) shippingCosts = data.costs || {};
+    } catch (e) { console.error("Error loading shipping costs", e); }
 }
 
 window.updateCheckoutTotal = () => {
@@ -273,52 +264,25 @@ function setupEventListeners() {
                 status: "جديد",
                 paymentMethod: paymentMethod === 'cod' ? 'عند الاستلام' : 'أونلاين',
                 paymentStatus: "لم يتم الدفع",
-                userId: currentUser ? currentUser.uid : null,
-                userEmail: currentUser ? currentUser.email : null,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                userId: currentUser ? currentUser.id : null,
+                userEmail: currentUser ? currentUser.email : null
             };
 
             try {
-                // Always save order to Firestore first
-                const docRef = await db.collection('orders').add(orderData);
-                const orderId = docRef.id;
+                // Save order to Supabase
+                const { data, error } = await supabase.from('orders').insert([orderData]).select();
+                
+                if (error) throw error;
 
                 if (paymentMethod === 'online') {
-                    submitBtn.innerText = "جاري التحويل للدفع...";
-                    // Update this URL to your deployed backend later
-                    const BACKEND_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://your-backend-url.com';
-
-                    const res = await fetch(`${BACKEND_URL}/pay`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            amount: orderData.total,
-                            orderId: orderId,
-                            customer: {
-                                name: orderData.customerName,
-                                email: orderData.userEmail || "test@test.com",
-                                phone: orderData.phone
-                            },
-                            items: cart.map(i => ({ id: i.id, quantity: i.quantity }))
-                        })
-                    });
-
-                    if (!res.ok) throw new Error("Backend error");
-                    const data = await res.json();
-
-                    // Clear cart before redirecting
-                    cart = [];
-                    updateCartUI();
-                    saveCartToFirebase();
-
-                    window.location.href = data.iframe;
+                    alert("الدفع الأونلاين غير مفعل حالياً مع قاعدة البيانات الجديدة");
                     return;
                 }
 
                 // COD Flow
                 cart = [];
                 updateCartUI();
-                saveCartToFirebase();
+                saveCartToSupabase();
                 document.getElementById('checkout-modal').classList.remove('active');
                 document.getElementById('success-modal').classList.add('active');
                 orderForm.reset();
@@ -348,26 +312,25 @@ function setupEventListeners() {
     if (closeOrders) closeOrders.onclick = () => document.getElementById('my-orders-modal').classList.remove('active');
 }
 
-// --- Product Logic (Restored to User Structure) ---
+// --- Product Logic ---
 function renderAll() {
     if (!menContainer) return;
     menContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#fff;">جاري تحميل المنتجات...</div>';
 
     let localProds = JSON.parse(localStorage.getItem('diesel_products') || '[]');
 
-    if (typeof db !== 'undefined') {
-        db.collection('products').get().then(snapshot => {
-            let fireProds = [];
-            snapshot.forEach(doc => fireProds.push({ id: doc.id, ...doc.data() }));
-            combineAndRender(fireProds, localProds);
-        }).catch(() => combineAndRender([], localProds));
-    } else {
-        combineAndRender([], localProds);
-    }
+    supabase.from('products').select('*').then(({ data, error }) => {
+        let fireProds = [];
+        if (!error && data) {
+            fireProds = data;
+        }
+        combineAndRender(fireProds, localProds);
+    }).catch(() => combineAndRender([], localProds));
 }
 
 function combineAndRender(fireProds, localProds) {
     remoteProducts = [...fireProds, ...localProds];
+    // Fallback if empty and products variable exists (local js file)
     if (remoteProducts.length === 0 && typeof products !== 'undefined') remoteProducts = products;
 
     // Unique by name/id
@@ -531,7 +494,7 @@ window.addToCartFromModal = (size) => {
     else cart.push({ ...p, cartId, size, color, quantity: 1, image: img });
 
     updateCartUI();
-    saveCartToFirebase();
+    saveCartToSupabase();
     sizeModal.classList.remove('active');
     openCartSidebar();
 };
@@ -581,27 +544,30 @@ function updateCartUI() {
 
 window.updateCartQuantity = (id, d) => {
     const i = cart.find(x => x.cartId === id);
-    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); saveCartToFirebase(); } }
+    if (i) { i.quantity += d; if (i.quantity <= 0) removeFromCart(id); else { updateCartUI(); saveCartToSupabase(); } }
 };
 
-window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); saveCartToFirebase(); };
+window.removeFromCart = (id) => { cart = cart.filter(x => x.cartId !== id); updateCartUI(); saveCartToSupabase(); };
 
 function openCartSidebar() { cartSidebar.classList.add('open'); cartOverlay.classList.add('show'); }
 function closeCartSidebar() { cartSidebar.classList.remove('open'); cartOverlay.classList.remove('show'); }
 function closeMobileMenu() { if (mobileMenuBtn) { mobileMenuBtn.classList.remove('active'); navLinks.classList.remove('active'); } }
 
-// --- Auth & Orders (Latest Features) ---
+// --- Auth & Orders (Supabase) ---
 async function signInWithGoogle() {
     try {
-        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await firebase.auth().signInWithPopup(provider);
-        openMyOrdersModal();
-    } catch (e) { alert("خطأ في الدخول"); }
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.href // Redirect back to here
+            }
+        });
+        if (error) throw error;
+    } catch (e) { console.error(e); alert("خطأ في الدخول"); }
 }
 
 async function signOutUser() {
-    await firebase.auth().signOut();
+    await supabase.auth.signOut();
     cart = [];
     localStorage.removeItem('diesel_cart');
     updateCartUI();
@@ -609,7 +575,7 @@ async function signOutUser() {
 }
 
 function updateAuthUI() {
-    const name = currentUser ? (currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'حسابي') : null;
+    const name = currentUser ? (currentUser.user_metadata.full_name ? currentUser.user_metadata.full_name.split(' ')[0] : 'حسابي') : null;
     renderAuthUI(name);
 }
 
@@ -634,29 +600,46 @@ async function loadMyOrders() {
     const list = document.getElementById('my-orders-list');
     list.innerHTML = 'جاري التحميل...';
     try {
-        const snap = await db.collection('orders').where('userId', '==', currentUser.uid).get();
-        let orders = []; snap.forEach(doc => orders.push(doc.data()));
-        if (orders.length === 0) {
-            const snapEmail = await db.collection('orders').where('userEmail', '==', currentUser.email).get();
-            snapEmail.forEach(doc => orders.push(doc.data()));
-        }
-        orders.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+        const { data: orders, error } = await supabase.from('orders')
+            .select('*')
+            .eq('userId', currentUser.id)
+            .order('createdAt', { ascending: false });
 
-        list.innerHTML = orders.map(o => {
+        if (error) throw error;
+
+        // If no orders by ID, try by email (legacy/guest support)
+        let finalOrders = orders;
+        if (!finalOrders || finalOrders.length === 0) {
+            const { data: emailOrders } = await supabase.from('orders')
+                .select('*')
+                .eq('userEmail', currentUser.email)
+                .order('createdAt', { ascending: false });
+            finalOrders = emailOrders || [];
+        }
+
+        list.innerHTML = finalOrders.map(o => {
             const statusClass = o.status === 'جديد' ? 'status-new' :
                 o.status === 'جاري التجهيز' ? 'status-preparing' :
                     o.status === 'تم الشحن' ? 'status-shipped' :
                         o.status === 'تم التسليم' ? 'status-delivered' : 'status-new';
 
+            const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '';
+
+            // Handle items being string (from existing code) or JSON
+            let items = o.items;
+            if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch(e) {}
+            }
+
             return `
             <div class="order-card-mini">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">
-                    <span style="font-size:0.85rem; opacity:0.6; font-family:'Outfit', sans-serif;">${o.createdAt?.toDate().toLocaleDateString('ar-EG') || ''}</span>
+                    <span style="font-size:0.85rem; opacity:0.6; font-family:'Outfit', sans-serif;">${date}</span>
                     <span class="order-status ${statusClass}">${o.status}</span>
                 </div>
                 
                 <div class="order-items-list">
-                    ${o.items.map(i => `
+                    ${items.map(i => `
                         <div style="display:flex; align-items:center; gap:15px; margin-bottom:12px;">
                             <img src="${i.image}" style="width:50px; height:60px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
                             <div style="flex:1; text-align:right;">
@@ -674,21 +657,22 @@ async function loadMyOrders() {
                 </div>
             </div>`;
         }).join('') || '<div style="text-align:center; padding:40px; opacity:0.5;">لا توجد طلبات سابقة</div>';
-    } catch (e) { list.innerHTML = 'خطأ في التحميل'; }
+    } catch (e) { console.error(e); list.innerHTML = 'خطأ في التحميل'; }
 }
 
-async function saveCartToFirebase() {
+async function saveCartToSupabase() {
     localStorage.setItem('diesel_cart', JSON.stringify(cart));
-    if (currentUser && db) {
-        await db.collection('user_carts').doc(currentUser.uid).set({ items: cart, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (currentUser) {
+        // Upsert cart to Supabase
+        await supabase.from('user_carts').upsert({ userId: currentUser.id, items: cart, updatedAt: new Date() });
     }
 }
 
-async function loadCartFromFirebase() {
-    if (!currentUser || !db) return;
-    const doc = await db.collection('user_carts').doc(currentUser.uid).get();
-    if (doc.exists) {
-        const remote = doc.data().items || [];
+async function loadCartFromSupabase() {
+    if (!currentUser) return;
+    const { data } = await supabase.from('user_carts').select('items').eq('userId', currentUser.id).single();
+    if (data && data.items) {
+        const remote = data.items;
         if (remote.length > 0) { cart = remote; updateCartUI(); }
     }
 }
